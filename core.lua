@@ -353,7 +353,7 @@ local function UpdateAltCurrency(button, index, i)
 	end
 
 	table.insert(currency_frames, button.money);
-	button.money.currency_frames_count = #currency_frames - 1;
+	button.currency_frames = currency_frames;
 
 	lastFrame = nil;
 
@@ -515,13 +515,15 @@ local function MerchantUpdate()
 				button.money:SetTextColor(1, 1, 1);
 			end
 
-			local moneyWidth = button.money:GetWidth();
+			local moneyWidth = 0;
 
-			if button.money.currency_frames_count > 0 then
-				moneyWidth = moneyWidth + button.money.currency_frames_count * 22 + 7;
+			if #button.currency_frames > 0 then
+				for i,frame in ipairs(button.currency_frames) do
+					moneyWidth = moneyWidth + frame:GetWidth();
+				end
 			end
 
-			local textWidth = NuuhMerchantFrame:GetWidth() - 45 - moneyWidth;
+			local textWidth = NuuhMerchantFrame:GetWidth() - 40 - moneyWidth;
 
 			button.itemname:SetWidth(textWidth);
 			button.iteminfo:SetWidth(textWidth);
@@ -840,11 +842,11 @@ for i=1, NUM_BUTTONS, 1 do
 
 	local money = button:CreateFontString("ARTWORK", "$parentMoney", "GameFontHighlight");
 	button.money = money;
-	money.currency_frames_count = 0;
 	money:SetPoint("RIGHT", -2, 0);
 	money:SetJustifyH("RIGHT");
 
 	button.item = {};
+	button.currency_frames = {};
 
 	for j=1, MAX_ITEM_COST, 1 do
 		local item = CreateFrame("Button", "$parentItem" .. j, button);
