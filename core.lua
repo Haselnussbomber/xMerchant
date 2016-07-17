@@ -29,6 +29,7 @@ local function GetError(link, isRecipe)
 	end
 
 	local id = link:match("item:(%d+)");
+
 	if ( errors[id] ) then
 		return errors[id];
 	end
@@ -37,62 +38,72 @@ local function GetError(link, isRecipe)
 	tooltip:SetHyperlink(link);
 
 	local errormsg = "";
+
 	for i=2, tooltip:NumLines() do
-		local text = _G["NuuhMerchantTooltipTextLeft"..i];
+		local text = _G["NuuhMerchantTooltipTextLeft" .. i];
 		local r, g, b = text:GetTextColor();
 		local gettext = text:GetText();
+
 		if ( gettext and r >= 0.9 and g <= 0.2 and b <= 0.2 and gettext ~= RETRIEVING_ITEM_INFO ) then
 			if ( errormsg ~= "" ) then
-				errormsg = errormsg..", ";
+				errormsg = errormsg .. ", ";
 			end
 
 			local level = gettext:match(REQUIRES_LEVEL);
+
 			if ( level ) then
-				errormsg = errormsg..LEVEL:format(level);
+				errormsg = errormsg .. LEVEL:format(level);
 			end
 
 			local reputation = gettext:match(REQUIRES_REPUTATION);
+
 			if ( reputation ) then
-				errormsg = errormsg..reputation;
+				errormsg = errormsg .. reputation;
 
 				local factionName = gettext:match(REQUIRES_REPUTATION_NAME);
+
 				if ( factionName ) then
 					local standingLabel = factions[factionName];
+
 					if ( standingLabel ) then
-						errormsg = errormsg.." ("..standingLabel..") - "..factionName;
+						errormsg = errormsg .. " (" .. standingLabel .. ") - " .. factionName;
 					else
-						errormsg = errormsg.." ("..factionName..")";
+						errormsg = errormsg .. " - " .. factionName;
 					end
 				end
 			end
 
 			local skill, slevel = gettext:match(REQUIRES_SKILL);
+
 			if ( skill and slevel ) then
-				errormsg = errormsg..SKILL:format(skill, slevel);
+				errormsg = errormsg .. SKILL:format(skill, slevel);
 			end
 
 			local requires = gettext:match(REQUIRES);
+
 			if ( not level and not reputation and not skill and requires ) then
-				errormsg = errormsg..requires;
+				errormsg = errormsg .. requires;
 			end
 
 			if ( not level and not reputation and not skill and not requires ) then
 				if ( errormsg ~= "" ) then
-					errormsg = gettext..", "..errormsg;
+					errormsg = gettext .. ", " .. errormsg;
 				else
-					errormsg = errormsg..gettext;
+					errormsg = errormsg .. gettext;
 				end
 			end
 		end
 
-		local text = _G["NuuhMerchantTooltipTextRight"..i];
+		local text = _G["NuuhMerchantTooltipTextRight" .. i];
 		local r, g, b = text:GetTextColor();
 		local gettext = text:GetText();
+
 		if ( gettext and r >= 0.9 and g <= 0.2 and b <= 0.2 ) then
 			if ( errormsg ~= "" ) then
-				errormsg = errormsg..", ";
+				errormsg = errormsg .. ", ";
 			end
-			errormsg = errormsg..gettext;
+
+			errormsg = errormsg .. gettext;
 		end
 
 		if ( isRecipe and i == 5 ) then
@@ -105,6 +116,7 @@ local function GetError(link, isRecipe)
 	end
 
 	errors[id] = errormsg;
+
 	return errormsg;
 end
 
@@ -114,6 +126,7 @@ local function GetKnown(link)
 	end
 
 	local id = link:match("item:(%d+)");
+
 	if ( knowns[id] ) then
 		return true;
 	end
@@ -122,7 +135,7 @@ local function GetKnown(link)
 	tooltip:SetHyperlink(link);
 
 	for i=1, tooltip:NumLines() do
-		if ( _G["NuuhMerchantTooltipTextLeft"..i]:GetText() == ITEM_SPELL_KNOWN ) then
+		if ( _G["NuuhMerchantTooltipTextLeft" .. i]:GetText() == ITEM_SPELL_KNOWN ) then
 			knowns[id] = true;
 			return true;
 		end
@@ -142,9 +155,9 @@ local function FactionsUpdate()
 			local standingLabel;
 
 			if friendID ~= nil then
-				standingLabel = friendTextLevel or "unkown"
+				standingLabel = friendTextLevel or "unkown";
 			else
-				standingLabel = _G["FACTION_STANDING_LABEL"..tostring(standingId)] or "unkown";
+				standingLabel = _G["FACTION_STANDING_LABEL" .. tostring(standingId)] or "unkown";
 			end
 
 			factions[name] = standingLabel;
@@ -162,6 +175,7 @@ local function CurrencyUpdate()
 
 		if ( not isHeader and itemID ) then
 			currencies[tonumber(itemID)] = count;
+
 			if ( not isHeader and itemID and tonumber(itemID) <= 9 ) then
 				currencies[name] = count;
 			end
@@ -172,6 +186,7 @@ local function CurrencyUpdate()
 
 	for i=INVSLOT_FIRST_EQUIPPED, INVSLOT_LAST_EQUIPPED, 1 do
 		local itemID = GetInventoryItemID("player", i);
+
 		if ( itemID ) then
 			currencies[tonumber(itemID)] = 1;
 		end
@@ -179,12 +194,15 @@ local function CurrencyUpdate()
 
 	for bagID=0, NUM_BAG_SLOTS, 1 do
 		local numSlots = GetContainerNumSlots(bagID);
+
 		for slotID=1, numSlots, 1 do
 			local itemID = GetContainerItemID(bagID, slotID);
+
 			if ( itemID ) then
 				local count = select(2, GetContainerItemInfo(bagID, slotID));
 				itemID = tonumber(itemID);
 				local currency = currencies[itemID];
+
 				if ( currency ) then
 					currencies[itemID] = currency+count;
 				else
@@ -198,6 +216,7 @@ end
 local function AltCurrencyFrame_Update(item, texture, cost, itemID, currencyName)
 	if ( itemID ~= 0 or currencyName) then
 		local currency = currencies[itemID] or currencies[currencyName];
+
 		if ( currency and currency < cost or not currency ) then
 			item.count:SetTextColor(1, 0, 0);
 		else
@@ -226,11 +245,8 @@ end
 local function UpdateAltCurrency(button, index, i)
 	local currency_frames = {};
 	local lastFrame;
-	local honorPoints, arenaPoints, itemCount = GetMerchantItemCostInfo(index);
-
-	if ( select(4, GetBuildInfo()) >= 40000 ) then
-		itemCount, honorPoints, arenaPoints = honorPoints, 0, 0;
-	end
+	local itemCount = GetMerchantItemCostInfo(index);
+	local honorPoints, arenaPoints = 0, 0;
 
 	if ( itemCount > 0 ) then
 		for i=1, MAX_ITEM_COST, 1 do
@@ -239,7 +255,7 @@ local function UpdateAltCurrency(button, index, i)
 			item.index = index;
 			item.item = i;
 
-			if ( currencyName  then
+			if( currencyName ) then
 				item.pointType = "Beta";
 				item.itemLink = currencyName;
 			else
@@ -254,8 +270,7 @@ local function UpdateAltCurrency(button, index, i)
 				item:Hide();
 			else
 				lastFrame = item;
-				lastFrame._dbg_name = "item"..i
-				table.insert(currency_frames, item)
+				table.insert(currency_frames, item);
 				item:Show();
 			end
 		end
@@ -266,6 +281,7 @@ local function UpdateAltCurrency(button, index, i)
 	end
 
 	local arena = button.arena;
+
 	if ( arenaPoints > 0 ) then
 		arena.pointType = ARENA_POINTS;
 
@@ -278,21 +294,22 @@ local function UpdateAltCurrency(button, index, i)
 		end
 
 		lastFrame = arena;
-		lastFrame._dbg_name = "arena"
-		table.insert(currency_frames, arena)
+		table.insert(currency_frames, arena);
 		arena:Show();
 	else
 		arena:Hide();
 	end
 
 	local honor = button.honor;
+
 	if ( honorPoints > 0 ) then
 		honor.pointType = HONOR_POINTS;
 
 		local factionGroup = UnitFactionGroup("player");
 		local honorTexture = "Interface\\TargetingFrame\\UI-PVP-Horde";
+
 		if ( factionGroup ) then
-			honorTexture = "Interface\\TargetingFrame\\UI-PVP-"..factionGroup;
+			honorTexture = "Interface\\TargetingFrame\\UI-PVP-" .. factionGroup;
 		end
 
 		AltCurrencyFrame_Update(honor, honorTexture, honorPoints);
@@ -304,17 +321,16 @@ local function UpdateAltCurrency(button, index, i)
 		end
 
 		lastFrame = honor;
-		lastFrame._dbg_name = "honor"
-		table.insert(currency_frames, arena)
+		table.insert(currency_frames, arena);
 		honor:Show();
 	else
 		honor:Hide();
 	end
 
-	button.money._dbg_name = "money"
-	table.insert(currency_frames, button.money)
+	table.insert(currency_frames, button.money);
 
-	lastFrame = nil
+	lastFrame = nil;
+
 	for i,frame in ipairs(currency_frames) do
 		if i == 1 then
 			frame:SetPoint("RIGHT", -2, 6);
@@ -325,7 +341,8 @@ local function UpdateAltCurrency(button, index, i)
 				frame:SetPoint("RIGHT", -2, 0);
 			end
 		end
-		lastFrame = frame
+
+		lastFrame = frame;
 	end
 end
 
@@ -388,13 +405,14 @@ local function MerchantUpdate()
 				-- if currencies[name] then
 					-- subtext = "You have: " .. tostring(currencies[name]);
 				-- end
-				button.iteminfo:SetText(subtext);
+				button.iteminfo:SetText("");
 			end
 
-			button.itemname:SetText((numAvailable >= 0 and "|cffffffff["..numAvailable.."]|r " or "")..(quantity > 1 and "|cffffffff"..quantity.."x|r " or "")..(name or "|cffff0000"..RETRIEVING_ITEM_INFO));
+			button.itemname:SetText((numAvailable >= 0 and "|cffffffff[" .. numAvailable .. "]|r " or "") .. (quantity > 1 and "|cffffffff" .. quantity .. "x|r " or "") .. (name or "|cffff0000" .. RETRIEVING_ITEM_INFO));
 			button.icon:SetTexture(texture);
 
 			UpdateAltCurrency(button, offset, i);
+
 			if ( extendedCost and price <= 0 ) then
 				button.price = nil;
 				button.extendedCost = true;
@@ -402,11 +420,11 @@ local function MerchantUpdate()
 			elseif ( extendedCost and price > 0 ) then
 				button.price = price;
 				button.extendedCost = true;
-				button.money:SetText(GetCoinTextureString(price));
+				button.money:SetText(GetMoneyString(price, true));
 			else
 				button.price = price;
 				button.extendedCost = nil;
-				button.money:SetText(GetCoinTextureString(price));
+				button.money:SetText(GetMoneyString(price, true));
 			end
 
 			if ( GetMoney() < price ) then
@@ -425,6 +443,7 @@ local function MerchantUpdate()
 				button.isShown = 1;
 
 				local errors = GetError(link, itemType and itemType == RECIPE);
+
 				if ( errors ) then
 					button.iteminfo:SetText("|cffd00000"..subtext.." - "..errors.."|r");
 				end
@@ -438,6 +457,7 @@ local function MerchantUpdate()
 				button.isShown = nil;
 
 				local errors = GetError(link, itemType and itemType == RECIPE);
+
 				if ( errors ) then
 					button.iteminfo:SetText("|cffd00000"..subtext.." - "..errors.."|r");
 				end
@@ -446,7 +466,7 @@ local function MerchantUpdate()
 			button.r = r;
 			button.g = g;
 			button.b = b;
-			button.link = GetMerchantItemLink(offset);
+			button.link = link;
 			button.hasItem = true;
 			button.texture = texture;
 			button:SetID(offset);
@@ -501,7 +521,7 @@ end
 
 local function SplitStack(button, split)
 	if ( button.extendedCost ) then
-		MerchantFrame_ConfirmExtendedItemCost(button, split)
+		MerchantFrame_ConfirmExtendedItemCost(button, split);
 	elseif ( split > 0 ) then
 		BuyMerchantItem(button:GetID(), split);
 	end
@@ -565,6 +585,7 @@ local function OnEvent(self, event, ...)
 		self:UnregisterEvent("ADDON_LOADED");
 
 		local x = 0;
+
 		if ( IsAddOnLoaded("SellOMatic") ) then
 			x = 20;
 		elseif ( IsAddOnLoaded("DropTheCheapestThing") ) then
@@ -575,6 +596,7 @@ local function OnEvent(self, event, ...)
 			self.search:SetWidth(92-x);
 			self.search:SetPoint("BOTTOMLEFT", self, "TOPLEFT", 50-x, 9);
 		end
+
 		return;
 	end
 end
@@ -676,7 +698,7 @@ scrollframe:SetPoint("TOPLEFT", MerchantFrame, 22, -65);
 scrollframe:SetScript("OnVerticalScroll", OnVerticalScroll);
 
 local top = frame:CreateTexture("$parentTop", "ARTWORK");
-frame.top = top
+frame.top = top;
 top:SetWidth(31);
 top:SetHeight(256);
 top:SetPoint("TOPRIGHT", 30, 6);
@@ -684,7 +706,7 @@ top:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar");
 top:SetTexCoord(0, 0.484375, 0, 1);
 
 local bottom = frame:CreateTexture("$parentBottom", "ARTWORK");
-frame.bottom = bottom
+frame.bottom = bottom;
 bottom:SetWidth(31);
 bottom:SetHeight(108);
 bottom:SetPoint("BOTTOMRIGHT", 30, -6);
@@ -826,7 +848,7 @@ end
 local function Update()
 	if ( MerchantFrame.selectedTab == 1 ) then
 		for i=1, 12, 1 do
-			_G["MerchantItem"..i]:Hide();
+			_G["MerchantItem" .. i]:Hide();
 		end
 
 		frame:Show();
@@ -835,9 +857,11 @@ local function Update()
 		MerchantUpdate();
 	else
 		frame:Hide();
+
 		for i=1, 12, 1 do
-			_G["MerchantItem"..i]:Show();
+			_G["MerchantItem" .. i]:Show();
 		end
+
 		if ( StackSplitFrame:IsShown() ) then
 			StackSplitFrame:Hide();
 		end
@@ -850,12 +874,13 @@ local function OnHide()
 	wipe(errors);
 	wipe(currencies);
 end
+
 hooksecurefunc("MerchantFrame_OnHide", OnHide);
 
 MerchantBuyBackItem:ClearAllPoints();
 MerchantBuyBackItem:SetPoint("BOTTOMLEFT", 175, 32);
 
 for _, frame in next, { MerchantNextPageButton, MerchantPrevPageButton, MerchantPageText } do
-	frame:Hide()
+	frame:Hide();
 	frame.Show = function() end;
 end
