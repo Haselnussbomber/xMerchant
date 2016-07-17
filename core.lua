@@ -451,8 +451,8 @@ local function MerchantUpdate()
 
 			local moneyWidth = button.money:GetWidth();
 
-			if price <= 0 and button.money.currency_frames_count > 0 then
-				moneyWidth = button.money.currency_frames_count * 22 + 7;
+			if button.money.currency_frames_count > 0 then
+				moneyWidth = moneyWidth + button.money.currency_frames_count * 22 + 7;
 			end
 
 			local textWidth = NuuhMerchantFrame:GetWidth() - 45 - moneyWidth;
@@ -798,7 +798,7 @@ for i=1, NUM_BUTTONS, 1 do
 	local money = button:CreateFontString("ARTWORK", "$parentMoney", "GameFontHighlight");
 	button.money = money;
 	money.currency_frames_count = 0;
-	money:SetPoint("TOPRIGHT", -3, -4);
+	money:SetPoint("RIGHT", -2, 0);
 	money:SetJustifyH("RIGHT");
 
 	button.item = {};
