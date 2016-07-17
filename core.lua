@@ -363,29 +363,38 @@ local function MerchantUpdate()
 		if ( offset <= numMerchantItems ) then
 			local name, texture, price, quantity, numAvailable, isUsable, extendedCost = GetMerchantItemInfo(offset);
 			local link = GetMerchantItemLink(offset);
-			local subtext = "";
 			local r, g, b = 0.5, 0.5, 0.5;
-			local _, itemRarity, itemType, itemSubType;
-			local iLevel, iLevelText;
+			local itemType;
 
 			if ( link ) then
-				_, _, itemRarity, iLevel, _, itemType, itemSubType = GetItemInfo(link);
+				local subtext = {};
+				local _, itemRarity, itemSubType, equipSlot, itemClassId, itemSubClassId;
+				_, _, itemRarity, _, _, itemType, itemSubType, _, equipSlot, _, _, itemClassId, itemSubClassId = GetItemInfo(link);
+				local iLevel = GetUpgradedItemLevelFromItemLink(link);
 
 				if itemRarity then
 					r, g, b = GetItemQualityColor(itemRarity);
 					button.itemname:SetTextColor(r, g, b);
 				end
 
-				if itemSubType then
-					subtext = itemSubType:gsub("%(OBSOLETE%)", "");
-					if iLevel and iLevel > 1 then
-						iLevelText = tostring(iLevel);
-						subtext = subtext.." - "..iLevelText;
-					end
-					button.iteminfo:SetText(subtext);
-				else
-					button.iteminfo:SetText("");
+				if IsEquippableItem(link) and iLevel and iLevel > 1 and not (equipSlot == "INVTYPE_TABARD" or equipSlot == "INVTYPE_BAG") then
+					table.insert(subtext, tostring(iLevel));
 				end
+
+				if itemClassId == LE_ITEM_CLASS_WEAPON or itemClassId == LE_ITEM_CLASS_ARMOR then
+					if not (itemClassId == LE_ITEM_CLASS_ARMOR and (itemSubClassId == LE_ITEM_ARMOR_GENERIC or equipSlot == "INVTYPE_CLOAK" or equipSlot == "INVTYPE_BAG")) then
+						local name = GetItemSubClassInfo(itemClassId, itemSubClassId);
+						table.insert(subtext, name);
+					end
+				else
+					table.insert(subtext, itemSubType);
+				end
+
+				if IsEquippableItem(link) and equipSlot and equipSlot ~="" and _G[equipSlot] ~= itemSubType and not (itemClassId == LE_ITEM_CLASS_WEAPON or itemSubClassId == LE_ITEM_ARMOR_SHIELD) then
+					table.insert(subtext, _G[equipSlot]);
+				end
+
+				button.iteminfo:SetText(table.concat(subtext, " - "));
 
 				local alpha = 0.3;
 
@@ -463,7 +472,7 @@ local function MerchantUpdate()
 				local errors = GetError(link, itemType and itemType == RECIPE);
 
 				if ( errors ) then
-					button.iteminfo:SetText("|cffd00000"..subtext.." - "..errors.."|r");
+					button.iteminfo:SetText(button.iteminfo:GetText() .. " - |cffd00000" .. errors .. "|r");
 				end
 			elseif ( itemType and itemType == RECIPE and not GetKnown(link) ) then
 				button.highlight:SetVertexColor(0.2, 1, 0.2, 0.5);
@@ -477,13 +486,13 @@ local function MerchantUpdate()
 				local errors = GetError(link, itemType and itemType == RECIPE);
 
 				if ( errors ) then
-					button.iteminfo:SetText("|cffd00000"..subtext.." - "..errors.."|r");
-
 					if GetKnown(link) then
 						button.highlight:SetVertexColor(1, 0.2, 0.2, 0.5);
 						button.highlight:Show();
 						button.isShown = 1;
 					end
+
+					button.iteminfo:SetText(button.iteminfo:GetText() .. " - |cffd00000" .. errors .. "|r");
 				end
 			end
 
