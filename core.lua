@@ -150,6 +150,25 @@ local function GetKnown(link)
 	return false;
 end
 
+local function IsAppearanceUnknown(link)
+	if ( not link ) then
+		return false;
+	end
+
+	local id = link:match("item:(%d+)");
+
+	tooltip:SetOwner(UIParent, "ANCHOR_NONE");
+	tooltip:SetHyperlink(link);
+
+	for i=1, tooltip:NumLines() do
+		if ( _G["NuuhMerchantTooltipTextLeft" .. i]:GetText() == TRANSMOGRIFY_TOOLTIP_APPEARANCE_UNKNOWN ) then
+			return true;
+		end
+	end
+
+	return false;
+end
+
 local function BindsToBattleNetAccount(link)
 	if ( not link ) then
 		return false;
@@ -478,6 +497,14 @@ local function MerchantUpdate()
 				end
 
 				button:SetAlpha(alpha);
+
+				if itemRarity > LE_ITEM_QUALITY_COMMON and IsAppearanceUnknown(link) then
+					button.highlight:SetVertexColor(0.8, 0.4, 0.8, 0.5);
+					button.highlight:Show();
+					button.isShown = 1;
+
+					r, g, b = 0.9, 0.5, 0.9
+				end
 			else
 				-- TODO: feature of currencies player have
 				-- if currencies[name] then
