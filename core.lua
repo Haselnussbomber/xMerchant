@@ -614,7 +614,7 @@ local function Item_OnLeave(self)
 end
 
 local function OnEvent(self, event, ...)
-	if ( addonName == select(1, ...) ) then
+	if ( event == "ADDON_LOADED" and addonName == select(1, ...) ) then
 		self:UnregisterEvent("ADDON_LOADED");
 
 		local x = 0;
@@ -632,10 +632,17 @@ local function OnEvent(self, event, ...)
 
 		return;
 	end
+
+	if ( event == "BAG_UPDATE_DELAYED" ) then
+		CurrencyUpdate();
+		FactionsUpdate();
+		MerchantUpdate();
+	end
 end
 
 local frame = CreateFrame("Frame", "NuuhMerchantFrame", MerchantFrame);
 frame:RegisterEvent("ADDON_LOADED");
+frame:RegisterEvent("BAG_UPDATE_DELAYED");
 frame:SetScript("OnEvent", OnEvent);
 frame:SetWidth(294);
 frame:SetHeight(294);
