@@ -478,6 +478,12 @@ local function MerchantUpdate()
 
 				if ( errors ) then
 					button.iteminfo:SetText("|cffd00000"..subtext.." - "..errors.."|r");
+
+					if GetKnown(link) then
+						button.highlight:SetVertexColor(1, 0.2, 0.2, 0.5);
+						button.highlight:Show();
+						button.isShown = 1;
+					end
 				end
 			end
 
