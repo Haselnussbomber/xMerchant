@@ -147,6 +147,25 @@ local function GetKnown(link)
 	return false;
 end
 
+local function BindsToBattleNetAccount(link)
+	if ( not link ) then
+		return false;
+	end
+
+	local id = link:match("item:(%d+)");
+
+	tooltip:SetOwner(UIParent, "ANCHOR_NONE");
+	tooltip:SetHyperlink(link);
+
+	for i=1, tooltip:NumLines() do
+		if ( _G["NuuhMerchantTooltipTextLeft" .. i]:GetText():match(ITEM_BIND_TO_BNETACCOUNT) ) then
+			return true;
+		end
+	end
+
+	return false;
+end
+
 local function FactionsUpdate()
 	wipe(factions);
 
@@ -378,7 +397,7 @@ local function MerchantUpdate()
 					button.itemname:SetTextColor(r, g, b);
 				end
 
-				if IsEquippableItem(link) and iLevel and iLevel > 0 and not (equipSlot == "INVTYPE_TABARD" or equipSlot == "INVTYPE_BAG") then
+				if IsEquippableItem(link) and iLevel and iLevel > 0 and not (equipSlot == "INVTYPE_TABARD" or equipSlot == "INVTYPE_BAG") and (iLevel == 1 and not BindsToBattleNetAccount(link)) then
 					table.insert(subtext, tostring(iLevel));
 				end
 
