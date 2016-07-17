@@ -517,10 +517,8 @@ local function MerchantUpdate()
 
 			local moneyWidth = 0;
 
-			if #button.currency_frames > 0 then
-				for i,frame in ipairs(button.currency_frames) do
-					moneyWidth = moneyWidth + frame:GetWidth();
-				end
+			for i,frame in ipairs(button.currency_frames) do
+				moneyWidth = moneyWidth + frame:GetWidth();
 			end
 
 			local textWidth = NuuhMerchantFrame:GetWidth() - 40 - moneyWidth;
