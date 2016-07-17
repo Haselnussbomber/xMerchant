@@ -143,10 +143,12 @@ local function FactionsUpdate()
 
 			if friendID ~= nil then
 				standingLabel = friendTextLevel or "unkown"
+			else
+				standingLabel = _G["FACTION_STANDING_LABEL"..tostring(standingId)] or "unkown";
 			end
 
 			factions[name] = standingLabel;
-		end
+	 	end
 	end
 end
 
