@@ -271,13 +271,8 @@ local function AltCurrencyFrame_Update(item, texture, cost, itemID, currencyName
 	item.count:SetText(cost);
 	item.icon:SetTexture(texture);
 
-	if ( item.pointType == HONOR_POINTS ) then
-		item.count:SetPoint("RIGHT", item.icon, "LEFT", 1, 0);
-		item.icon:SetTexCoord(0.03125, 0.59375, 0.03125, 0.59375);
-	else
-		item.count:SetPoint("RIGHT", item.icon, "LEFT", -2, 0);
-		item.icon:SetTexCoord(0, 1, 0, 1);
-	end
+	item.count:SetPoint("RIGHT", item.icon, "LEFT", -2, 0);
+	item.icon:SetTexCoord(0, 1, 0, 1);
 
 	local iconWidth = 17;
 	item.icon:SetWidth(iconWidth);
@@ -290,25 +285,17 @@ local function UpdateAltCurrency(button, index, i)
 	local currency_frames = {};
 	local lastFrame;
 	local itemCount = GetMerchantItemCostInfo(index);
-	local honorPoints, arenaPoints = 0, 0;
 
 	if ( itemCount > 0 ) then
 		for i=1, MAX_ITEM_COST, 1 do
-			local itemTexture, itemValue, itemLink, currencyName = GetMerchantItemCostItem(index, i);
+			local itemTexture, itemValue, itemLink = GetMerchantItemCostItem(index, i);
 			local item = button.item[i];
 			item.index = index;
 			item.item = i;
-
-			if( currencyName ) then
-				item.pointType = "Beta";
-				item.itemLink = currencyName;
-			else
-				item.pointType = nil;
-				item.itemLink = itemLink;
-			end
+			item.itemLink = itemLink;
 
 			local itemID = tonumber((itemLink or "item:0"):match("item:(%d+)"));
-			AltCurrencyFrame_Update(item, itemTexture, itemValue, itemID, currencyName);
+			AltCurrencyFrame_Update(item, itemTexture, itemValue, itemID);
 
 			if ( not itemTexture ) then
 				item:Hide();
@@ -322,53 +309,6 @@ local function UpdateAltCurrency(button, index, i)
 		for i=1, MAX_ITEM_COST, 1 do
 			button.item[i]:Hide();
 		end
-	end
-
-	local arena = button.arena;
-
-	if ( arenaPoints > 0 ) then
-		arena.pointType = ARENA_POINTS;
-
-		AltCurrencyFrame_Update(arena, "Interface\\PVPFrame\\PVP-ArenaPoints-Icon", arenaPoints);
-
-		if ( GetArenaCurrency() < arenaPoints ) then
-			arena.count:SetTextColor(1, 0, 0);
-		else
-			arena.count:SetTextColor(1, 1, 1);
-		end
-
-		lastFrame = arena;
-		table.insert(currency_frames, arena);
-		arena:Show();
-	else
-		arena:Hide();
-	end
-
-	local honor = button.honor;
-
-	if ( honorPoints > 0 ) then
-		honor.pointType = HONOR_POINTS;
-
-		local factionGroup = UnitFactionGroup("player");
-		local honorTexture = "Interface\\TargetingFrame\\UI-PVP-Horde";
-
-		if ( factionGroup ) then
-			honorTexture = "Interface\\TargetingFrame\\UI-PVP-" .. factionGroup;
-		end
-
-		AltCurrencyFrame_Update(honor, honorTexture, honorPoints);
-
-		if ( GetHonorCurrency() < honorPoints ) then
-			honor.count:SetTextColor(1, 0, 0);
-		else
-			honor.count:SetTextColor(1, 1, 1);
-		end
-
-		lastFrame = honor;
-		table.insert(currency_frames, arena);
-		honor:Show();
-	else
-		honor:Hide();
 	end
 
 	table.insert(currency_frames, button.money);
@@ -639,21 +579,7 @@ local function Item_OnEnter(self)
 	end
 
 	GameTooltip:SetOwner(self, "ANCHOR_RIGHT");
-
-	if ( self.pointType == ARENA_POINTS ) then
-		GameTooltip:SetText(ARENA_POINTS, HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b);
-		GameTooltip:AddLine(TOOLTIP_ARENA_POINTS, nil, nil, nil, 1);
-		GameTooltip:Show();
-	elseif ( self.pointType == HONOR_POINTS ) then
-		GameTooltip:SetText(HONOR_POINTS, HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b);
-		GameTooltip:AddLine(TOOLTIP_HONOR_POINTS, nil, nil, nil, 1);
-		GameTooltip:Show();
-	elseif ( self.pointType == "Beta" ) then
-		GameTooltip:SetText(self.itemLink, HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b);
-		GameTooltip:Show();
-	else
-		GameTooltip:SetHyperlink(self.itemLink);
-	end
+	GameTooltip:SetHyperlink(self.itemLink);
 
 	if ( IsModifiedClick("DRESSUP") ) then
 		ShowInspectCursor();
@@ -827,7 +753,7 @@ for i=1, NUM_BUTTONS, 1 do
 		button:SetPoint("TOP", buttons[i-1], "BOTTOM");
 	end
 
-	button:RegisterForClicks("LeftButtonUp","RightButtonUp");
+	button:RegisterForClicks("LeftButtonUp", "RightButtonUp");
 	button:RegisterForDrag("LeftButton");
 	button.UpdateTooltip = OnEnter;
 	button.SplitStack = SplitStack;
@@ -860,7 +786,7 @@ for i=1, NUM_BUTTONS, 1 do
 
 	local iteminfo = button:CreateFontString("ARTWORK", "$parentItemInfo", "GameFontDisableSmall");
 	button.iteminfo = iteminfo;
-	iteminfo:SetPoint("TOPLEFT", itemname, "BOTTOMLEFT", 0, 3);
+	iteminfo:SetPoint("TOPLEFT", itemname, "BOTTOMLEFT", 0, 2);
 	iteminfo:SetJustifyH("LEFT");
 	iteminfo:SetTextHeight(12);
 	iteminfo:SetHeight(16);
@@ -885,7 +811,7 @@ for i=1, NUM_BUTTONS, 1 do
 			item:SetPoint("RIGHT", button.item[j-1], "LEFT", -2, 0);
 		end
 
-		item:RegisterForClicks("LeftButtonUp","RightButtonUp");
+		item:RegisterForClicks("LeftButtonUp", "RightButtonUp");
 		item:SetScript("OnClick", Item_OnClick);
 		item:SetScript("OnEnter", Item_OnEnter);
 		item:SetScript("OnLeave", Item_OnLeave);
@@ -902,52 +828,6 @@ for i=1, NUM_BUTTONS, 1 do
 		item.count = count;
 		count:SetPoint("RIGHT", icon, "LEFT", -2, 0);
 	end
-
-	local honor = CreateFrame("Button", "$parentHonor", button);
-	button.honor = honor;
-	honor.itemLink = select(2, GetItemInfo(43308)) or "\124cffffffff\124Hitem:43308:0:0:0:0:0:0:0:0\124h[Ehrenpunkte]\124h\124r";
-	honor:SetWidth(17);
-	honor:SetHeight(17);
-	honor:SetPoint("RIGHT", -2, 0);
-	honor:RegisterForClicks("LeftButtonUp","RightButtonUp");
-	honor:SetScript("OnClick", Item_OnClick);
-	honor:SetScript("OnEnter", Item_OnEnter);
-	honor:SetScript("OnLeave", Item_OnLeave);
-	honor.hasItem = true;
-	honor.UpdateTooltip = Item_OnEnter;
-
-	local icon = honor:CreateTexture("$parentIcon", "BORDER");
-	honor.icon = icon;
-	icon:SetWidth(17);
-	icon:SetHeight(17);
-	icon:SetPoint("RIGHT");
-
-	local count = honor:CreateFontString("ARTWORK", "$parentCount", "GameFontHighlight");
-	honor.count = count;
-	count:SetPoint("RIGHT", icon, "LEFT", -2, 0);
-
-	local arena = CreateFrame("Button", "$parentArena", button);
-	button.arena = arena;
-	arena.itemLink = select(2, GetItemInfo(43307)) or "\124cffffffff\124Hitem:43307:0:0:0:0:0:0:0:0\124h[Arenapunkte]\124h\124r";
-	arena:SetWidth(17);
-	arena:SetHeight(17);
-	arena:SetPoint("RIGHT", -2, 0);
-	arena:RegisterForClicks("LeftButtonUp","RightButtonUp");
-	arena:SetScript("OnClick", Item_OnClick);
-	arena:SetScript("OnEnter", Item_OnEnter);
-	arena:SetScript("OnLeave", Item_OnLeave);
-	arena.hasItem = true;
-	arena.UpdateTooltip = Item_OnEnter;
-
-	local icon = arena:CreateTexture("$parentIcon", "BORDER");
-	arena.icon = icon;
-	icon:SetWidth(17);
-	icon:SetHeight(17);
-	icon:SetPoint("RIGHT");
-
-	local count = arena:CreateFontString("ARTWORK", "$parentCount", "GameFontHighlight");
-	arena.count = count;
-	count:SetPoint("RIGHT", icon, "LEFT", -2, 0);
 
 	buttons[i] = button;
 end
