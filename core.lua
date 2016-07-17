@@ -23,6 +23,8 @@ local SKILL = L["%1$s (%2$d)"];
 local REQUIRES = L["Requires (.+)"];
 local tooltip = CreateFrame("GameTooltip", "NuuhMerchantTooltip", UIParent, "GameTooltipTemplate");
 
+local NUM_BUTTONS = 8;
+
 local function GetError(link, isRecipe)
 	if ( not link ) then
 		return false;
@@ -328,6 +330,7 @@ local function UpdateAltCurrency(button, index, i)
 	end
 
 	table.insert(currency_frames, button.money);
+	button.money.currency_frames_count = #currency_frames - 1;
 
 	lastFrame = nil;
 
@@ -350,8 +353,9 @@ local function MerchantUpdate()
 	local self = NuuhMerchantFrame;
 	local numMerchantItems = GetMerchantNumItems();
 
-	FauxScrollFrame_Update(self.scrollframe, numMerchantItems, 10, 29.4, nil, nil, nil, nil, nil, nil, 1);
-	for i=1, 10, 1 do
+	FauxScrollFrame_Update(self.scrollframe, numMerchantItems, NUM_BUTTONS, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, nil, nil, nil, nil, nil, nil, 1);
+
+	for i=1, NUM_BUTTONS, 1 do
 		local offset = i+FauxScrollFrame_GetOffset(self.scrollframe);
 		local button = buttons[i];
 		button.hover = nil;
@@ -366,6 +370,7 @@ local function MerchantUpdate()
 
 			if ( link ) then
 				_, _, itemRarity, iLevel, _, itemType, itemSubType = GetItemInfo(link);
+
 				if itemRarity then
 					r, g, b = GetItemQualityColor(itemRarity);
 					button.itemname:SetTextColor(r, g, b);
@@ -383,17 +388,19 @@ local function MerchantUpdate()
 				end
 
 				local alpha = 0.3;
+
 				if ( searching == "" or searching == SEARCH:lower() or name:lower():match(searching)
-					or ( itemRarity and ( tostring(itemRarity):lower():match(searching) or _G["ITEM_QUALITY"..tostring(itemRarity).."_DESC"]:lower():match(searching) ) )
+					or ( itemRarity and ( tostring(itemRarity):lower():match(searching) or _G["ITEM_QUALITY" .. tostring(itemRarity) .. "_DESC"]:lower():match(searching) ) )
 					or ( itemType and itemType:lower():match(searching) )
 					or ( itemSubType and itemSubType:lower():match(searching) )
-					) then
+				) then
 					alpha = 1;
 				elseif ( self.tooltipsearching ) then
 					tooltip:SetOwner(UIParent, "ANCHOR_NONE");
 					tooltip:SetHyperlink(link);
+
 					for i=1, tooltip:NumLines() do
-						if ( _G["NuuhMerchantTooltipTextLeft"..i]:GetText():lower():match(searching) ) then
+						if ( _G["NuuhMerchantTooltipTextLeft" .. i]:GetText():lower():match(searching) ) then
 							alpha = 1;
 							break;
 						end
@@ -432,6 +439,17 @@ local function MerchantUpdate()
 			else
 				button.money:SetTextColor(1, 1, 1);
 			end
+
+			local moneyWidth = button.money:GetWidth();
+
+			if price <= 0 and button.money.currency_frames_count > 0 then
+				moneyWidth = button.money.currency_frames_count * 22 + 7;
+			end
+
+			local textWidth = NuuhMerchantFrame:GetWidth() - 45 - moneyWidth;
+
+			button.itemname:SetWidth(textWidth);
+			button.iteminfo:SetWidth(textWidth);
 
 			if ( numAvailable == 0 ) then
 				button.highlight:SetVertexColor(0.5, 0.5, 0.5, 0.5);
@@ -483,7 +501,7 @@ local function MerchantUpdate()
 end
 
 local function OnVerticalScroll(self, offset)
-	FauxScrollFrame_OnVerticalScroll(self, offset, 29.4, MerchantUpdate);
+	FauxScrollFrame_OnVerticalScroll(self, offset, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, MerchantUpdate);
 end
 
 local function OnClick(self, button)
@@ -604,7 +622,7 @@ end
 local frame = CreateFrame("Frame", "NuuhMerchantFrame", MerchantFrame);
 frame:RegisterEvent("ADDON_LOADED");
 frame:SetScript("OnEvent", OnEvent);
-frame:SetWidth(295);
+frame:SetWidth(294);
 frame:SetHeight(294);
 frame:SetPoint("TOPLEFT", 10, -65);
 
@@ -692,31 +710,31 @@ tooltipsearching:SetChecked(false);
 
 local scrollframe = CreateFrame("ScrollFrame", "NuuhMerchantScrollFrame", frame, "FauxScrollFrameTemplate");
 frame.scrollframe = scrollframe;
-scrollframe:SetWidth(284);
+scrollframe:SetWidth(283);
 scrollframe:SetHeight(298);
 scrollframe:SetPoint("TOPLEFT", MerchantFrame, 22, -65);
 scrollframe:SetScript("OnVerticalScroll", OnVerticalScroll);
 
 local top = frame:CreateTexture("$parentTop", "ARTWORK");
 frame.top = top;
-top:SetWidth(31);
+top:SetWidth(30);
 top:SetHeight(256);
-top:SetPoint("TOPRIGHT", 30, 6);
+top:SetPoint("TOPRIGHT", 30, 7);
 top:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar");
 top:SetTexCoord(0, 0.484375, 0, 1);
 
 local bottom = frame:CreateTexture("$parentBottom", "ARTWORK");
 frame.bottom = bottom;
-bottom:SetWidth(31);
+bottom:SetWidth(30);
 bottom:SetHeight(108);
-bottom:SetPoint("BOTTOMRIGHT", 30, -6);
+bottom:SetPoint("BOTTOMRIGHT", 30, -8);
 bottom:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar");
 bottom:SetTexCoord(0.515625, 1, 0, 0.421875);
 
-for i=1, 10, 1 do
-	local button = CreateFrame("Button", "NuuhMerchantFrame"..i, frame);
+for i=1, NUM_BUTTONS, 1 do
+	local button = CreateFrame("Button", "NuuhMerchantFrame" .. i, frame);
 	button:SetWidth(frame:GetWidth());
-	button:SetHeight(29.4);
+	button:SetHeight(scrollframe:GetHeight() / NUM_BUTTONS);
 
 	if ( i == 1 ) then
 		button:SetPoint("TOPLEFT", 0, -1);
@@ -734,6 +752,13 @@ for i=1, 10, 1 do
 	button:SetScript("OnLeave", OnLeave);
 	button:SetScript("OnHide", OnHide);
 
+	local icon = button:CreateTexture("$parentIcon", "BORDER");
+	button.icon = icon;
+	icon:SetWidth(25.4);
+	icon:SetHeight(25.4);
+	icon:SetPoint("LEFT", 2, 0);
+	icon:SetTexture("Interface\\Icons\\temp");
+
 	local highlight = button:CreateTexture("$parentHighlight", "BACKGROUND");
 	button.highlight = highlight;
 	highlight:SetAllPoints();
@@ -743,31 +768,28 @@ for i=1, 10, 1 do
 
 	local itemname = button:CreateFontString("ARTWORK", "$parentItemName", "GameFontHighlightSmall");
 	button.itemname = itemname;
-	itemname:SetPoint("TOPLEFT", 30.4, 0);
+	itemname:SetPoint("TOPLEFT", icon, "TOPRIGHT", 5, 2);
 	itemname:SetJustifyH("LEFT");
+	itemname:SetTextHeight(13);
+	itemname:SetHeight(15);
 
 	local iteminfo = button:CreateFontString("ARTWORK", "$parentItemInfo", "GameFontDisableSmall");
 	button.iteminfo = iteminfo;
+	iteminfo:SetPoint("TOPLEFT", itemname, "BOTTOMLEFT", 0, 3);
 	iteminfo:SetJustifyH("LEFT");
-	iteminfo:SetPoint("BOTTOMLEFT", 35.4, -1);
-	iteminfo:SetTextHeight(14);
-
-	local icon = button:CreateTexture("$parentIcon", "BORDER");
-	button.icon = icon;
-	icon:SetWidth(25.4);
-	icon:SetHeight(25.4);
-	icon:SetPoint("LEFT", 2, 0);
-	icon:SetTexture("Interface\\Icons\\temp");
+	iteminfo:SetTextHeight(12);
+	iteminfo:SetHeight(16);
 
 	local money = button:CreateFontString("ARTWORK", "$parentMoney", "GameFontHighlight");
 	button.money = money;
-	money:SetPoint("RIGHT", -2, 0);
+	money.currency_frames_count = 0;
+	money:SetPoint("TOPRIGHT", -3, -4);
 	money:SetJustifyH("RIGHT");
-	itemname:SetPoint("RIGHT", money, "LEFT", -2, 0);
 
 	button.item = {};
+
 	for j=1, MAX_ITEM_COST, 1 do
-		local item = CreateFrame("Button", "$parentItem"..j, button);
+		local item = CreateFrame("Button", "$parentItem" .. j, button);
 		button.item[j] = item;
 		item:SetWidth(17);
 		item:SetHeight(17);
