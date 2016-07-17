@@ -22,6 +22,7 @@ local REQUIRES_SKILL = L["Requires (.+) %((%d+)%)"];
 local SKILL = L["%1$s (%2$d)"];
 local REQUIRES = L["Requires (.+)"];
 local tooltip = CreateFrame("GameTooltip", "NuuhMerchantTooltip", UIParent, "GameTooltipTemplate");
+local npcName = "";
 
 local NUM_BUTTONS = 8;
 
@@ -890,6 +891,12 @@ for i=1, NUM_BUTTONS, 1 do
 end
 
 local function Update()
+	if MerchantNameText:GetText() ~= npcName then
+		FauxScrollFrame_OnVerticalScroll(NuuhMerchantFrame.scrollframe, 0, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, MerchantUpdate);
+	end
+
+	npcName = UnitName("NPC");
+
 	if ( MerchantFrame.selectedTab == 1 ) then
 		for i=1, 12, 1 do
 			_G["MerchantItem" .. i]:Hide();
@@ -917,6 +924,7 @@ hooksecurefunc("MerchantFrame_Update", Update);
 local function OnHide()
 	wipe(errors);
 	wipe(currencies);
+	npcName = "";
 end
 
 hooksecurefunc("MerchantFrame_OnHide", OnHide);
