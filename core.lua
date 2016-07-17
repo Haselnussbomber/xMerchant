@@ -397,7 +397,7 @@ local function MerchantUpdate()
 					button.itemname:SetTextColor(r, g, b);
 				end
 
-				if IsEquippableItem(link) and iLevel and iLevel > 0 and not (equipSlot == "INVTYPE_TABARD" or equipSlot == "INVTYPE_BAG") and (iLevel == 1 and not BindsToBattleNetAccount(link)) then
+				if IsEquippableItem(link) and iLevel and iLevel > 0 and not (equipSlot == "INVTYPE_TABARD" or equipSlot == "INVTYPE_BAG") and not (iLevel == 1 and BindsToBattleNetAccount(link)) then
 					table.insert(subtext, tostring(iLevel));
 				end
 
