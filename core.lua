@@ -21,6 +21,7 @@ local REQUIRES_REPUTATION_NAME = L["Requires (.+) %- .+"];
 local REQUIRES_SKILL = L["Requires (.+) %((%d+)%)"];
 local SKILL = L["%1$s (%2$d)"];
 local REQUIRES = L["Requires (.+)"];
+local REQUIRES_CLASSES = ITEM_CLASSES_ALLOWED:gsub("%%s", "(.*)");
 local tooltip = CreateFrame("GameTooltip", "NuuhMerchantTooltip", UIParent, "GameTooltipTemplate");
 local npcName = "";
 
@@ -82,7 +83,13 @@ local function GetError(link, isRecipe)
 				table.insert(errormsgs, requires);
 			end
 
-			if ( text and not level and not reputation and not skill and not requires ) then
+			local classes = text:match(REQUIRES_CLASSES);
+
+			if ( not level and not reputation and not skill and not requires and classes ) then
+				table.insert(errormsgs, classes);
+			end
+
+			if ( text and not level and not reputation and not skill and not requires and not classes ) then
 				--if ( errormsg ~= "" ) then
 				--	errormsg = text .. ", " .. errormsg;
 				--else
