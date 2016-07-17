@@ -40,73 +40,69 @@ local function GetError(link, isRecipe)
 	tooltip:SetOwner(UIParent, "ANCHOR_NONE");
 	tooltip:SetHyperlink(link);
 
-	local errormsg = "";
+	local errormsgs = {};
 
 	for i=2, tooltip:NumLines() do
-		local text = _G["NuuhMerchantTooltipTextLeft" .. i];
-		local r, g, b = text:GetTextColor();
-		local gettext = text:GetText();
+		local frame = _G["NuuhMerchantTooltipTextLeft" .. i];
+		local r, g, b = frame:GetTextColor();
+		local text = frame:GetText();
 
-		if ( gettext and r >= 0.9 and g <= 0.2 and b <= 0.2 and gettext ~= RETRIEVING_ITEM_INFO ) then
-			if ( errormsg ~= "" ) then
-				errormsg = errormsg .. ", ";
-			end
-
-			local level = gettext:match(REQUIRES_LEVEL);
+		if ( text and r >= 0.9 and g <= 0.2 and b <= 0.2 and text ~= RETRIEVING_ITEM_INFO ) then
+			local level = text:match(REQUIRES_LEVEL);
 
 			if ( level ) then
-				errormsg = errormsg .. LEVEL:format(level);
+				table.insert(errormsgs, LEVEL:format(level));
 			end
 
-			local reputation = gettext:match(REQUIRES_REPUTATION);
+			local reputation = text:match(REQUIRES_REPUTATION);
 
 			if ( reputation ) then
-				errormsg = errormsg .. reputation;
-
-				local factionName = gettext:match(REQUIRES_REPUTATION_NAME);
+				local factionName = text:match(REQUIRES_REPUTATION_NAME);
 
 				if ( factionName ) then
 					local standingLabel = factions[factionName];
 
 					if ( standingLabel ) then
-						errormsg = errormsg .. " (" .. standingLabel .. ") - " .. factionName;
+						table.insert(errormsgs, reputation .. " (" .. standingLabel .. ") - " .. factionName);
 					else
-						errormsg = errormsg .. " - " .. factionName;
+						table.insert(errormsgs, reputation .. " - " .. factionName);
 					end
 				end
 			end
 
-			local skill, slevel = gettext:match(REQUIRES_SKILL);
+			local skill, slevel = text:match(REQUIRES_SKILL);
 
 			if ( skill and slevel ) then
-				errormsg = errormsg .. SKILL:format(skill, slevel);
+				table.insert(errormsgs, SKILL:format(skill, slevel));
 			end
 
-			local requires = gettext:match(REQUIRES);
+			local requires = text:match(REQUIRES);
 
 			if ( not level and not reputation and not skill and requires ) then
-				errormsg = errormsg .. requires;
+				table.insert(errormsgs, requires);
 			end
 
-			if ( not level and not reputation and not skill and not requires ) then
-				if ( errormsg ~= "" ) then
-					errormsg = gettext .. ", " .. errormsg;
-				else
-					errormsg = errormsg .. gettext;
-				end
+			if ( text and not level and not reputation and not skill and not requires ) then
+				--if ( errormsg ~= "" ) then
+				--	errormsg = text .. ", " .. errormsg;
+				--else
+				--	errormsg = errormsg .. text;
+				--end
+				table.insert(errormsgs, text);
 			end
 		end
 
-		local text = _G["NuuhMerchantTooltipTextRight" .. i];
-		local r, g, b = text:GetTextColor();
-		local gettext = text:GetText();
+		frame = _G["NuuhMerchantTooltipTextRight" .. i];
+		r, g, b = frame:GetTextColor();
+		text = frame:GetText();
 
-		if ( gettext and r >= 0.9 and g <= 0.2 and b <= 0.2 ) then
-			if ( errormsg ~= "" ) then
-				errormsg = errormsg .. ", ";
-			end
+		if ( text and r >= 0.9 and g <= 0.2 and b <= 0.2 ) then
+			--if ( errormsg ~= "" ) then
+			--	errormsg = errormsg .. ", ";
+			--end
 
-			errormsg = errormsg .. gettext;
+			--errormsg = errormsg .. text;
+			table.insert(errormsgs, text);
 		end
 
 		if ( isRecipe and i == 5 ) then
@@ -114,13 +110,13 @@ local function GetError(link, isRecipe)
 		end
 	end
 
-	if ( errormsg == "" ) then
+	if #errormsgs == 0 then
 		return false;
 	end
 
-	errors[id] = errormsg;
+	errors[id] = errormsgs;
 
-	return errormsg;
+	return errormsgs;
 end
 
 local function GetKnown(link)
@@ -369,6 +365,16 @@ local function UpdateAltCurrency(button, index, i)
 	end
 end
 
+local function isMentionedInErrors(errors, text)
+	for i,err in ipairs(errors) do
+		if err and err ~= "" and err:match(text) then
+			return true;
+		end
+	end
+
+	return false;
+end
+
 local function MerchantUpdate()
 	local self = NuuhMerchantFrame;
 	local numMerchantItems = GetMerchantNumItems();
@@ -384,10 +390,38 @@ local function MerchantUpdate()
 			local name, texture, price, quantity, numAvailable, isUsable, extendedCost = GetMerchantItemInfo(offset);
 			local link = GetMerchantItemLink(offset);
 			local r, g, b = 0.5, 0.5, 0.5;
-			local itemType;
+			local itemType, errormsgs;
+			local subtext = {};
+
+			if ( numAvailable == 0 ) then
+				button.highlight:SetVertexColor(0.5, 0.5, 0.5, 0.5);
+				button.highlight:Show();
+				button.isShown = 1;
+			elseif ( not isUsable ) then
+				button.highlight:SetVertexColor(1, 0.2, 0.2, 0.5);
+				button.highlight:Show();
+				button.isShown = 1;
+
+				errormsgs = GetError(link, itemType and itemType == RECIPE);
+			elseif ( itemType and itemType == RECIPE and not GetKnown(link) ) then
+				button.highlight:SetVertexColor(0.2, 1, 0.2, 0.5);
+				button.highlight:Show();
+				button.isShown = 1;
+			else
+				button.highlight:SetVertexColor(r, g, b, 0.5);
+				button.highlight:Hide();
+				button.isShown = nil;
+
+				errormsgs = GetError(link, itemType and itemType == RECIPE);
+
+				if errormsgs and GetKnown(link) then
+					button.highlight:SetVertexColor(1, 0.2, 0.2, 0.5);
+					button.highlight:Show();
+					button.isShown = 1;
+				end
+			end
 
 			if ( link ) then
-				local subtext = {};
 				local _, itemRarity, itemSubType, equipSlot, itemClassId, itemSubClassId;
 				_, _, itemRarity, _, _, itemType, itemSubType, _, equipSlot, _, _, itemClassId, itemSubClassId = GetItemInfo(link);
 				local iLevel = GetUpgradedItemLevelFromItemLink(link);
@@ -407,14 +441,14 @@ local function MerchantUpdate()
 						table.insert(subtext, name);
 					end
 				else
-					table.insert(subtext, itemSubType);
+					if not errormsgs or not isMentionedInErrors(errormsgs, itemSubType) then
+						table.insert(subtext, itemSubType);
+					end
 				end
 
 				if IsEquippableItem(link) and equipSlot and equipSlot ~="" and _G[equipSlot] ~= itemSubType and not (itemClassId == LE_ITEM_CLASS_WEAPON or itemSubClassId == LE_ITEM_ARMOR_SHIELD) then
 					table.insert(subtext, _G[equipSlot]);
 				end
-
-				button.iteminfo:SetText(table.concat(subtext, " - "));
 
 				local alpha = 0.3;
 
@@ -435,16 +469,21 @@ local function MerchantUpdate()
 						end
 					end
 				end
+
 				button:SetAlpha(alpha);
 			else
 				-- TODO: feature of currencies player have
 				-- if currencies[name] then
 					-- subtext = "You have: " .. tostring(currencies[name]);
 				-- end
-				button.iteminfo:SetText("");
 			end
 
-			button.itemname:SetText((numAvailable >= 0 and "|cffffffff[" .. numAvailable .. "]|r " or "") .. (quantity > 1 and "|cffffffff" .. quantity .. "x|r " or "") .. (name or "|cffff0000" .. RETRIEVING_ITEM_INFO));
+			button.itemname:SetText(
+				(numAvailable >= 0 and "|cffffffff[" .. numAvailable .. "]|r " or "") ..
+				(quantity > 1 and "|cffffffff" .. quantity .. "x|r " or "") ..
+				(name or "|cffff0000" .. RETRIEVING_ITEM_INFO)
+			);
+
 			button.icon:SetTexture(texture);
 
 			UpdateAltCurrency(button, offset, i);
@@ -480,41 +519,11 @@ local function MerchantUpdate()
 			button.itemname:SetWidth(textWidth);
 			button.iteminfo:SetWidth(textWidth);
 
-			if ( numAvailable == 0 ) then
-				button.highlight:SetVertexColor(0.5, 0.5, 0.5, 0.5);
-				button.highlight:Show();
-				button.isShown = 1;
-			elseif ( not isUsable ) then
-				button.highlight:SetVertexColor(1, 0.2, 0.2, 0.5);
-				button.highlight:Show();
-				button.isShown = 1;
-
-				local errors = GetError(link, itemType and itemType == RECIPE);
-
-				if ( errors ) then
-					button.iteminfo:SetText(button.iteminfo:GetText() .. " - |cffd00000" .. errors .. "|r");
-				end
-			elseif ( itemType and itemType == RECIPE and not GetKnown(link) ) then
-				button.highlight:SetVertexColor(0.2, 1, 0.2, 0.5);
-				button.highlight:Show();
-				button.isShown = 1;
-			else
-				button.highlight:SetVertexColor(r, g, b, 0.5);
-				button.highlight:Hide();
-				button.isShown = nil;
-
-				local errors = GetError(link, itemType and itemType == RECIPE);
-
-				if ( errors ) then
-					if GetKnown(link) then
-						button.highlight:SetVertexColor(1, 0.2, 0.2, 0.5);
-						button.highlight:Show();
-						button.isShown = 1;
-					end
-
-					button.iteminfo:SetText(button.iteminfo:GetText() .. " - |cffd00000" .. errors .. "|r");
-				end
+			if errormsgs then
+				table.insert(subtext, "|cffd00000" .. table.concat(errormsgs, " - ") .. "|r")
 			end
+
+			button.iteminfo:SetText(table.concat(subtext, " - ") or "");
 
 			button.r = r;
 			button.g = g;
