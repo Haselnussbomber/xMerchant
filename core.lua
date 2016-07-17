@@ -377,7 +377,7 @@ local function MerchantUpdate()
 					button.itemname:SetTextColor(r, g, b);
 				end
 
-				if IsEquippableItem(link) and iLevel and iLevel > 1 and not (equipSlot == "INVTYPE_TABARD" or equipSlot == "INVTYPE_BAG") then
+				if IsEquippableItem(link) and iLevel and iLevel > 0 and not (equipSlot == "INVTYPE_TABARD" or equipSlot == "INVTYPE_BAG") then
 					table.insert(subtext, tostring(iLevel));
 				end
 
