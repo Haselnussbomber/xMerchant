@@ -396,11 +396,13 @@ local function MerchantUpdate()
 				local iLevel = GetUpgradedItemLevelFromItemLink(link);
 
 				if itemRarity then
+					local qr, qg, qb = GetItemQualityColor(itemRarity);
+					button.itemname:SetTextColor(qr, qg, qb);
+
 					if not errormsgs then
-						r, g, b = GetItemQualityColor(itemRarity);
-						button.itemname:SetTextColor(r, g, b);
+						r, g, b = qr, qg, qb;
 					else
-						r, g, b = 1, 0.3, 0.3
+						r, g, b = 1, 0.3, 0.3;
 					end
 				end
 
@@ -501,7 +503,7 @@ local function MerchantUpdate()
 			button.iteminfo:SetWidth(textWidth);
 
 			if errormsgs then
-				table.insert(subtext, "|cffd00000" .. table.concat(errormsgs, " - ") .. "|r")
+				table.insert(subtext, "|cffd00000" .. table.concat(errormsgs, " - ") .. "|r");
 			end
 
 			button.iteminfo:SetText(table.concat(subtext, " - ") or "");
