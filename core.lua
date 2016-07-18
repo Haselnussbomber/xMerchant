@@ -288,14 +288,21 @@ local function UpdateAltCurrency(button, index, i)
 
 	if ( itemCount > 0 ) then
 		for i=1, MAX_ITEM_COST, 1 do
-			local itemTexture, itemValue, itemLink = GetMerchantItemCostItem(index, i);
+			local itemTexture, itemValue, itemLink, currencyName = GetMerchantItemCostItem(index, i);
 			local item = button.item[i];
 			item.index = index;
 			item.item = i;
-			item.itemLink = itemLink;
+
+			if ( currencyName ) then
+				item.pointType = 1;
+				item.itemLink = currencyName;
+			else
+				item.pointType = 0;
+				item.itemLink = itemLink;
+			end
 
 			local itemID = tonumber((itemLink or "item:0"):match("item:(%d+)"));
-			AltCurrencyFrame_Update(item, itemTexture, itemValue, itemID);
+			AltCurrencyFrame_Update(item, itemTexture, itemValue, itemID, currencyName);
 
 			if ( not itemTexture ) then
 				item:Hide();
@@ -579,7 +586,13 @@ local function Item_OnEnter(self)
 	end
 
 	GameTooltip:SetOwner(self, "ANCHOR_RIGHT");
-	GameTooltip:SetHyperlink(self.itemLink);
+
+	if ( self.pointType == 1 ) then
+		GameTooltip:SetText(self.itemLink, HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b);
+		GameTooltip:Show();
+	else
+		GameTooltip:SetHyperlink(self.itemLink);
+	end
 
 	if ( IsModifiedClick("DRESSUP") ) then
 		ShowInspectCursor();
