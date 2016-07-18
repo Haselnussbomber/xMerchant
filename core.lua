@@ -271,10 +271,6 @@ local function CurrencyUpdate()
 	end
 end
 
-local function AltCurrencyFrame_Update(item, texture, cost, itemID, currencyName)
-
-end
-
 local function UpdateAltCurrency(button, index, i)
 	local currency_frames = {};
 	local lastFrame;
