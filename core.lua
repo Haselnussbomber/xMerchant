@@ -400,8 +400,12 @@ local function MerchantUpdate()
 				local iLevel = GetUpgradedItemLevelFromItemLink(link);
 
 				if itemRarity then
-					r, g, b = GetItemQualityColor(itemRarity);
-					button.itemname:SetTextColor(r, g, b);
+					if not errormsgs then
+						r, g, b = GetItemQualityColor(itemRarity);
+						button.itemname:SetTextColor(r, g, b);
+					else
+						r, g, b = 1, 0.3, 0.3
+					end
 				end
 
 				if IsEquippableItem(link) and iLevel and iLevel > 0 and not (equipSlot == "INVTYPE_TABARD" or equipSlot == "INVTYPE_BAG") and not (iLevel == 1 and BindsToBattleNetAccount(link)) then
