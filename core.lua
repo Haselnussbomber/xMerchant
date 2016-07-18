@@ -14,16 +14,24 @@ local errors = {};
 local factions = {};
 local currencies = {};
 local searching = "";
-local REQUIRES_LEVEL = L["Requires Level (%d+)"];
-local LEVEL = L["Level %d"];
-local REQUIRES_REPUTATION = L["Requires .+ %- (.+)"];
-local REQUIRES_REPUTATION_NAME = L["Requires (.+) %- .+"];
-local REQUIRES_SKILL = L["Requires (.+) %((%d+)%)"];
-local SKILL = L["%1$s (%2$d)"];
-local REQUIRES = L["Requires (.+)"];
-local REQUIRES_CLASSES = ITEM_CLASSES_ALLOWED:gsub("%%s", "(.*)");
-local tooltip = CreateFrame("GameTooltip", "NuuhMerchantTooltip", UIParent, "GameTooltipTemplate");
 local npcName = "";
+
+-- "Requires Level %d" to "Requires Level (%d+)"
+local REQUIRES_LEVEL = ITEM_MIN_LEVEL:gsub("%%d", "(%%d+)");
+
+-- "Requires %s - %s" to "Requires (%s+) - (%s+)"
+local REQUIRES_REPUTATION = ITEM_REQ_REPUTATION:gsub("%%s", "(%%s+)");
+
+-- "Requires %s (%d)" to "Requires (%s+) %((%d+)%)"
+local REQUIRES_SKILL = ITEM_MIN_SKILL:gsub("%%s", "(%%s+)"):gsub("%(%%d%)", "%((%%d+)%)");
+
+-- "Classes: %s" to "Classes: (.*)"
+local REQUIRES_CLASSES = ITEM_CLASSES_ALLOWED:gsub("%%s", "(.*)");
+
+-- "Requires %s" to "Requires (.*)"
+local REQUIRES = ITEM_REQ_SKILL:gsub("%%s", "(.*)");
+
+local tooltip = CreateFrame("GameTooltip", "NuuhMerchantTooltip", UIParent, "GameTooltipTemplate");
 
 local NUM_BUTTONS = 8;
 
@@ -52,15 +60,13 @@ local function GetError(link, isRecipe)
 			local level = text:match(REQUIRES_LEVEL);
 
 			if ( level ) then
-				table.insert(errormsgs, LEVEL:format(level));
+				table.insert(errormsgs, LEVEL_GAINED:format(level));
 			end
 
-			local reputation = text:match(REQUIRES_REPUTATION);
+			if ( not level ) then
+				local reputation, factionName = text:match(REQUIRES_REPUTATION);
 
-			if ( reputation ) then
-				local factionName = text:match(REQUIRES_REPUTATION_NAME);
-
-				if ( factionName ) then
+				if ( reputation and factionName ) then
 					local standingLabel = factions[factionName];
 
 					if ( standingLabel ) then
@@ -74,7 +80,7 @@ local function GetError(link, isRecipe)
 			local skill, slevel = text:match(REQUIRES_SKILL);
 
 			if ( skill and slevel ) then
-				table.insert(errormsgs, SKILL:format(skill, slevel));
+				table.insert(errormsgs, AUCTION_MAIL_ITEM_STACK:format(skill, slevel));
 			end
 
 			local requires = text:match(REQUIRES);
@@ -90,11 +96,6 @@ local function GetError(link, isRecipe)
 			end
 
 			if ( text and not level and not reputation and not skill and not requires and not classes ) then
-				--if ( errormsg ~= "" ) then
-				--	errormsg = text .. ", " .. errormsg;
-				--else
-				--	errormsg = errormsg .. text;
-				--end
 				table.insert(errormsgs, text);
 			end
 		end
@@ -104,11 +105,6 @@ local function GetError(link, isRecipe)
 		text = frame:GetText();
 
 		if ( text and r >= 0.9 and g <= 0.2 and b <= 0.2 ) then
-			--if ( errormsg ~= "" ) then
-			--	errormsg = errormsg .. ", ";
-			--end
-
-			--errormsg = errormsg .. text;
 			table.insert(errormsgs, text);
 		end
 
