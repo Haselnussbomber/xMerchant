@@ -211,16 +211,20 @@ local function CurrencyUpdate()
 	local limit = GetCurrencyListSize();
 
 	for i=1, limit do
-		local name, isHeader, _, _, _, count, _, _, _, _, _, itemID = GetCurrencyListInfo(i);
+		local name, isHeader, _, _, _, count = GetCurrencyListInfo(i);
 
-		if ( not isHeader and itemID ) then
-			currencies[tonumber(itemID)] = count;
+		if ( not isHeader and name and name ~= "" ) then
+			local link = GetCurrencyListLink(i);
+			local id = link:match("item:(%d+)");
 
-			if ( not isHeader and itemID and tonumber(itemID) <= 9 ) then
-				currencies[name] = count;
-			end
-		elseif ( not isHeader and not itemID ) then
-			currencies[name] = count;
+			table.insert(currencies, {
+				type = "currency",
+				index = i,
+				id = tonumber(id),
+				link = link,
+				name = name,
+				count = count
+			});
 		end
 	end
 
@@ -228,7 +232,12 @@ local function CurrencyUpdate()
 		local itemID = GetInventoryItemID("player", i);
 
 		if ( itemID ) then
-			currencies[tonumber(itemID)] = 1;
+			table.insert(currencies, {
+				type = "equip",
+				index = i,
+				id = tonumber(itemID),
+				count = 1
+			});
 		end
 	end
 
@@ -238,15 +247,24 @@ local function CurrencyUpdate()
 		for slotID=1, numSlots, 1 do
 			local itemID = GetContainerItemID(bagID, slotID);
 
-			if ( itemID ) then
-				local count = select(2, GetContainerItemInfo(bagID, slotID));
-				itemID = tonumber(itemID);
-				local currency = currencies[itemID];
+			if ( itemID and itemID ~= 0 ) then
+				local count, _, _, _, _, link = select(2, GetContainerItemInfo(bagID, slotID));
+				local existed = false;
 
-				if ( currency ) then
-					currencies[itemID] = currency+count;
-				else
-					currencies[itemID] = count;
+				for _, i in ipairs(currencies) do
+					if ( currencies[i] and currencies[i].id == tonumber(itemID) ) then
+						currencies[i].count = currencies[i].count + count;
+						existed = true;
+					end
+				end
+
+				if ( not existed ) then
+					table.insert(currencies, {
+						type = "bagitem",
+						id = tonumber(itemID),
+						link = link,
+						count = count
+					});
 				end
 			end
 		end
@@ -254,27 +272,7 @@ local function CurrencyUpdate()
 end
 
 local function AltCurrencyFrame_Update(item, texture, cost, itemID, currencyName)
-	if ( itemID ~= 0 or currencyName) then
-		local currency = currencies[itemID] or currencies[currencyName];
 
-		if ( currency and currency < cost or not currency ) then
-			item.count:SetTextColor(1, 0, 0);
-		else
-			item.count:SetTextColor(1, 1, 1);
-		end
-	end
-
-	item.count:SetText(cost);
-	item.icon:SetTexture(texture);
-
-	item.count:SetPoint("RIGHT", item.icon, "LEFT", -2, 0);
-	item.icon:SetTexCoord(0, 1, 0, 1);
-
-	local iconWidth = 17;
-	item.icon:SetWidth(iconWidth);
-	item.icon:SetHeight(iconWidth);
-	item:SetWidth(item.count:GetWidth() + iconWidth + 4);
-	item:SetHeight(item.count:GetHeight() + 4);
 end
 
 local function UpdateAltCurrency(button, index, i)
@@ -284,23 +282,51 @@ local function UpdateAltCurrency(button, index, i)
 
 	if ( itemCount > 0 ) then
 		for i=1, MAX_ITEM_COST, 1 do
-			local itemTexture, itemValue, itemLink, currencyName = GetMerchantItemCostItem(index, i);
+			local texture, cost, link, currencyName = GetMerchantItemCostItem(index, i);
 			local item = button.item[i];
 			item.index = index;
-			item.item = i;
 
-			if ( currencyName ) then
-				item.pointType = 1;
-				item.itemLink = currencyName;
-			else
-				item.pointType = 0;
-				item.itemLink = itemLink;
+			local itemID = tonumber((link or "item:0"):match("item:(%d+)"));
+			local currency = nil;
+
+			if ( itemID and itemID ~= 0 ) then
+				for _, c in ipairs(currencies) do
+					if ( c.id == itemID ) then
+						currency = c;
+					end
+				end
 			end
 
-			local itemID = tonumber((itemLink or "item:0"):match("item:(%d+)"));
-			AltCurrencyFrame_Update(item, itemTexture, itemValue, itemID, currencyName);
+			if ( not currency and currencyName ) then
+				for _, c in ipairs(currencies) do
+					if ( c.name == currencyName ) then
+						currency = c;
+					end
+				end
+			end
 
-			if ( not itemTexture ) then
+			item.currency = currency;
+			item.link = link;
+
+			if ( currency and cost and currency.count < cost or not currency ) then
+				item.count:SetTextColor(1, 0, 0);
+			else
+				item.count:SetTextColor(1, 1, 1);
+			end
+
+			item.count:SetText(cost);
+			item.icon:SetTexture(texture);
+
+			item.count:SetPoint("RIGHT", item.icon, "LEFT", -2, 0);
+			item.icon:SetTexCoord(0, 1, 0, 1);
+
+			local iconWidth = 17;
+			item.icon:SetWidth(iconWidth);
+			item.icon:SetHeight(iconWidth);
+			item:SetWidth(item.count:GetWidth() + iconWidth + 4);
+			item:SetHeight(item.count:GetHeight() + 4);
+
+			if ( not texture ) then
 				item:Hide();
 			else
 				lastFrame = item;
@@ -589,11 +615,19 @@ local function Item_OnEnter(self)
 
 	GameTooltip:SetOwner(self, "ANCHOR_RIGHT");
 
-	if ( self.pointType == 1 ) then
-		GameTooltip:SetText(self.itemLink, HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b);
+	if ( self.currency ) then
+		if ( self.currency.type == "currency" ) then
+			GameTooltip:SetCurrencyToken(self.currency.index);
+		elseif (self.currency.type == "equip" ) then
+			GameTooltip:SetInventoryItem("player", self.currency.index, nil, true);
+		elseif (self.currency.type == "bagitem" ) then
+			GameTooltip:SetHyperlink(self.currency.link);
+		end
+
 		GameTooltip:Show();
-	else
-		GameTooltip:SetHyperlink(self.itemLink);
+	elseif ( self.link ) then
+		GameTooltip:SetHyperlink(self.link);
+		GameTooltip:Show();
 	end
 
 	if ( IsModifiedClick("DRESSUP") ) then
