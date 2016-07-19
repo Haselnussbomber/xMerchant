@@ -13,4 +13,5 @@
 ## X-Curse-Repository-ID: wow/xmerchant/mainline
 
 localization.lua
+libs/GetUpgradedItemLevel.lua
 core.lua

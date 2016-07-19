@@ -413,9 +413,12 @@ local function MerchantUpdate()
 			end
 
 			if ( link ) then
-				local _, itemRarity, itemSubType, equipSlot, itemClassId, itemSubClassId;
-				_, _, itemRarity, _, _, itemType, itemSubType, _, equipSlot, _, _, itemClassId, itemSubClassId = GetItemInfo(link);
-				local iLevel = GetUpgradedItemLevelFromItemLink(link);
+				local _, itemRarity, iLevel, itemSubType, equipSlot, itemClassId, itemSubClassId;
+				_, _, itemRarity, iLevel, _, itemType, itemSubType, _, equipSlot, _, _, itemClassId, itemSubClassId = GetItemInfo(link);
+
+				if IsAddOnLoaded("Examiner") and IsEquippableItem(link) then
+					iLevel = GetUpgradedItemLevelFromItemLink(link);
+				end
 
 				if itemRarity then
 					local qr, qg, qb = GetItemQualityColor(itemRarity);
