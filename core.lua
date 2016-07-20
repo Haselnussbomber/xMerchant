@@ -8,6 +8,7 @@
 
 local addonName, xm = ...;
 local L = xm.L;
+
 local buttons = {};
 local knowns = {};
 local errors = {};
@@ -20,16 +21,16 @@ local npcName = "";
 local REQUIRES_LEVEL = ITEM_MIN_LEVEL:gsub("%%d", "(%%d+)");
 
 -- "Requires %s - %s" to "Requires (%s+) - (%s+)"
-local REQUIRES_REPUTATION = ITEM_REQ_REPUTATION:gsub("%%s", "(%%s+)");
+local REQUIRES_REPUTATION = ITEM_REQ_REPUTATION:gsub("%%s", "(%%a+)");
 
 -- "Requires %s (%d)" to "Requires (%s+) %((%d+)%)"
-local REQUIRES_SKILL = ITEM_MIN_SKILL:gsub("%%s", "(%%s+)"):gsub("%(%%d%)", "%((%%d+)%)");
+local REQUIRES_SKILL = ITEM_MIN_SKILL:gsub("%%1?$?s", "(%%a+)"):gsub("%(%%2?$?d%)", "%%((%%d+)%%)");
 
 -- "Classes: %s" to "Classes: (.*)"
 local REQUIRES_CLASSES = ITEM_CLASSES_ALLOWED:gsub("%%s", "(.*)");
 
 -- "Requires %s" to "Requires (.*)"
-local REQUIRES = ITEM_REQ_SKILL:gsub("%%s", "(.*)");
+local REQUIRES = ITEM_REQ_SKILL:gsub("%%1?$?s", "(.*)");
 
 local tooltip = CreateFrame("GameTooltip", "NuuhMerchantTooltip", UIParent, "GameTooltipTemplate");
 
@@ -165,25 +166,6 @@ local function IsAppearanceUnknown(link)
 	return false;
 end
 
-local function BindsToBattleNetAccount(link)
-	if ( not link ) then
-		return false;
-	end
-
-	local id = link:match("item:(%d+)");
-
-	tooltip:SetOwner(UIParent, "ANCHOR_NONE");
-	tooltip:SetHyperlink(link);
-
-	for i=1, tooltip:NumLines() do
-		if ( _G["NuuhMerchantTooltipTextLeft" .. i]:GetText():match(ITEM_BIND_TO_BNETACCOUNT) ) then
-			return true;
-		end
-	end
-
-	return false;
-end
-
 local function FactionsUpdate()
 	wipe(factions);
 
@@ -211,11 +193,11 @@ local function CurrencyUpdate()
 	local limit = GetCurrencyListSize();
 
 	for i=1, limit do
-		local name, isHeader, _, _, _, count = GetCurrencyListInfo(i);
+		local name, isHeader, _, _, _, count, _, max = GetCurrencyListInfo(i);
 
 		if ( not isHeader and name and name ~= "" ) then
 			local link = GetCurrencyListLink(i);
-			local id = link:match("item:(%d+)");
+			local id = link:match("currency:(%d+)");
 
 			table.insert(currencies, {
 				type = "currency",
@@ -223,7 +205,8 @@ local function CurrencyUpdate()
 				id = tonumber(id),
 				link = link,
 				name = name,
-				count = count
+				count = count,
+				max = max
 			});
 		end
 	end
@@ -289,6 +272,7 @@ local function UpdateAltCurrency(button, index, i)
 				for _, c in ipairs(currencies) do
 					if ( c.id == itemID ) then
 						currency = c;
+						break;
 					end
 				end
 			end
@@ -297,6 +281,7 @@ local function UpdateAltCurrency(button, index, i)
 				for _, c in ipairs(currencies) do
 					if ( c.name == currencyName ) then
 						currency = c;
+						break;
 					end
 				end
 			end
@@ -372,8 +357,10 @@ local function MerchantUpdate()
 
 	FauxScrollFrame_Update(self.scrollframe, numMerchantItems, NUM_BUTTONS, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, nil, nil, nil, nil, nil, nil, 1);
 
+	local isSearching = searching ~= "" and searching ~= SEARCH:lower();
+
 	for i=1, NUM_BUTTONS, 1 do
-		local offset = i+FauxScrollFrame_GetOffset(self.scrollframe);
+		local offset = i + FauxScrollFrame_GetOffset(self.scrollframe);
 		local button = buttons[i];
 		button.hover = nil;
 
@@ -383,6 +370,7 @@ local function MerchantUpdate()
 			local r, g, b = 0.5, 0.5, 0.5;
 			local itemType, errormsgs;
 			local subtext = {};
+			local alpha = isSearching and 0.3 or 1;
 
 			if ( numAvailable == 0 ) then
 				button.highlight:SetVertexColor(0.5, 0.5, 0.5, 0.5);
@@ -413,14 +401,31 @@ local function MerchantUpdate()
 			end
 
 			if ( link ) then
-				local _, itemRarity, iLevel, itemSubType, equipSlot, itemClassId, itemSubClassId;
-				_, _, itemRarity, iLevel, _, itemType, itemSubType, _, equipSlot, _, _, itemClassId, itemSubClassId = GetItemInfo(link);
+				local currencyID = link:match("currency:(%d+)");
 
-				if IsAddOnLoaded("Examiner") and IsEquippableItem(link) then
-					iLevel = GetUpgradedItemLevelFromItemLink(link);
-				end
+				if ( currencyID ) then
+					local _, currentAmount, _, earnedThisWeek, weeklyMax, totalMax, _, rarity = GetCurrencyInfo(link);
 
-				if itemRarity then
+					button.itemname:SetTextColor(GetItemQualityColor(rarity));
+
+					if ( isSearching and name:lower():match(searching) ) then
+						alpha = 1;
+					end
+
+					if ( weeklyMax and weeklyMax > 0 ) then
+						table.insert(subtext, CURRENCY_WEEKLY_CAP:format("", earnedThisWeek, weeklyMax));
+					elseif ( totalMax and totalMax ) then
+						table.insert(subtext, CURRENCY_TOTAL_CAP:format("", currentAmount, totalMax));
+					end
+				else
+					local _, itemRarity, iLevel, itemSubType, equipSlot, itemClassId, itemSubClassId;
+					_, _, itemRarity, iLevel, _, itemType, itemSubType, _, equipSlot, _, _, itemClassId, itemSubClassId = GetItemInfo(link);
+
+					local isWeapon = (itemClassId == LE_ITEM_CLASS_WEAPON);
+					local isArmor = (itemClassId == LE_ITEM_CLASS_ARMOR);
+
+					itemRarity = itemRarity or LE_ITEM_QUALITY_COMMON;
+
 					local qr, qg, qb = GetItemQualityColor(itemRarity);
 					button.itemname:SetTextColor(qr, qg, qb);
 
@@ -429,61 +434,77 @@ local function MerchantUpdate()
 					else
 						r, g, b = 1, 0.3, 0.3;
 					end
-				end
 
-				if IsEquippableItem(link) and iLevel and iLevel > 0 and not (equipSlot == "INVTYPE_TABARD" or equipSlot == "INVTYPE_BAG") and not (iLevel == 1 and BindsToBattleNetAccount(link)) then
-					table.insert(subtext, tostring(iLevel));
-				end
-
-				if itemClassId == LE_ITEM_CLASS_WEAPON or itemClassId == LE_ITEM_CLASS_ARMOR then
-					if not (itemClassId == LE_ITEM_CLASS_ARMOR and (itemSubClassId == LE_ITEM_ARMOR_GENERIC or equipSlot == "INVTYPE_CLOAK" or equipSlot == "INVTYPE_BAG")) then
-						local name = GetItemSubClassInfo(itemClassId, itemSubClassId);
-						table.insert(subtext, name);
+					-- item level
+					if IsEquippableItem(link)
+						and iLevel
+						and not (itemRarity == 7 and iLevel == 1) -- don't show if heirloom and ilvl == 1
+						and equipSlot ~= "INVTYPE_TABARD"
+						and equipSlot ~= "INVTYPE_BAG"
+						and equipSlot ~= "INVTYPE_BODY"
+					then
+						table.insert(subtext, tostring(iLevel));
 					end
-				else
-					if not errormsgs or not isMentionedInErrors(errormsgs, itemSubType) then
-						table.insert(subtext, itemSubType);
-					end
-				end
 
-				if IsEquippableItem(link) and equipSlot and equipSlot ~="" and _G[equipSlot] ~= itemSubType and not (itemClassId == LE_ITEM_CLASS_WEAPON or itemSubClassId == LE_ITEM_ARMOR_SHIELD) then
-					table.insert(subtext, _G[equipSlot]);
-				end
+					-- item type
+					if isWeapon or isArmor then
+						local isGeneric = (itemSubClassId == LE_ITEM_ARMOR_GENERIC); -- neck, finger, trinket, holdable...
+						local isCloak = (equipSlot == "INVTYPE_CLOAK");
+						local isBag = (equipSlot == "INVTYPE_BAG");
 
-				local alpha = 0.3;
-
-				if ( searching == "" or searching == SEARCH:lower() or name:lower():match(searching)
-					or ( itemRarity and ( tostring(itemRarity):lower():match(searching) or _G["ITEM_QUALITY" .. tostring(itemRarity) .. "_DESC"]:lower():match(searching) ) )
-					or ( itemType and itemType:lower():match(searching) )
-					or ( itemSubType and itemSubType:lower():match(searching) )
-				) then
-					alpha = 1;
-				elseif ( self.tooltipsearching ) then
-					tooltip:SetOwner(UIParent, "ANCHOR_NONE");
-					tooltip:SetHyperlink(link);
-
-					for i=1, tooltip:NumLines() do
-						if ( _G["NuuhMerchantTooltipTextLeft" .. i]:GetText():lower():match(searching) ) then
-							alpha = 1;
-							break;
+						if not (isArmor and (isGeneric or isCloak or isBag)) then
+							local name = GetItemSubClassInfo(itemClassId, itemSubClassId);
+							table.insert(subtext, name);
+						end
+					else
+						if not errormsgs or not isMentionedInErrors(errormsgs, itemSubType) then
+							table.insert(subtext, itemSubType);
 						end
 					end
+
+					-- equip slot
+					if IsEquippableItem(link)
+						and equipSlot
+						and equipSlot ~=""
+						and _G[equipSlot] ~= itemSubType
+						and not (isWeapon or itemSubClassId == LE_ITEM_ARMOR_SHIELD)
+					then
+						table.insert(subtext, _G[equipSlot]);
+					end
+
+					-- search
+					if isSearching then
+						if ( name:lower():match(searching)
+							or ( itemRarity and (
+								tostring(itemRarity):lower():match(searching) or
+								_G["ITEM_QUALITY" .. tostring(itemRarity) .. "_DESC"]:lower():match(searching)
+							) )
+							or ( itemType and itemType:lower():match(searching) )
+							or ( itemSubType and itemSubType:lower():match(searching) )
+							or ( equipSlot and _G[equipSlot] and _G[equipSlot]:lower():match(searching) )
+						) then
+							alpha = 1;
+						elseif ( self.tooltipsearching ) then
+							tooltip:SetOwner(UIParent, "ANCHOR_NONE");
+							tooltip:SetHyperlink(link);
+
+							for i=1, tooltip:NumLines() do
+								if ( _G["NuuhMerchantTooltipTextLeft" .. i]:GetText():lower():match(searching) ) then
+									alpha = 1;
+									break;
+								end
+							end
+						end
+					end
+
+					if itemRarity > LE_ITEM_QUALITY_COMMON and IsAppearanceUnknown(link) then
+						button.highlight:SetVertexColor(0.8, 0.4, 0.8, 0.5);
+						button.highlight:Show();
+						button.isShown = 1;
+
+						r, g, b = 0.9, 0.5, 0.9
+					end
 				end
-
-				button:SetAlpha(alpha);
-
-				if itemRarity > LE_ITEM_QUALITY_COMMON and IsAppearanceUnknown(link) then
-					button.highlight:SetVertexColor(0.8, 0.4, 0.8, 0.5);
-					button.highlight:Show();
-					button.isShown = 1;
-
-					r, g, b = 0.9, 0.5, 0.9
-				end
-			else
-				-- TODO: feature of currencies player have
-				-- if currencies[name] then
-					-- subtext = "You have: " .. tostring(currencies[name]);
-				-- end
 			end
 
 			button.itemname:SetText(
@@ -541,6 +562,7 @@ local function MerchantUpdate()
 			button.texture = texture;
 			button:SetID(offset);
 			button:Show();
+			button:SetAlpha(alpha);
 		else
 			button.price = nil;
 			button.hasItem = nil;
@@ -753,7 +775,7 @@ end
 
 local function Search_OnEnter(self)
 	GameTooltip:SetOwner(self, "ANCHOR_RIGHT");
-	GameTooltip:SetText(L["To browse item tooltips, too"]);
+	GameTooltip:SetText(L["Search in item tooltips"]);
 end
 
 local tooltipsearching = CreateFrame("CheckButton", "$parentTooltipSearching", frame, "InterfaceOptionsSmallCheckButtonTemplate");
