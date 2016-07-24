@@ -357,9 +357,13 @@ local function GetFilteredMerchantItemIndexes()
 	local isSearching = searching ~= "" and searching ~= SEARCH:lower();
 
 	for i=1, numMerchantItems, 1 do
-		local item = { index = i, isSearchedItem = false };
 		local name = GetMerchantItemInfo(i);
 		local link = GetMerchantItemLink(i);
+		local item = {
+			index = i,
+			isSearchedItem = false,
+			link = link
+		};
 
 		if ( isSearching and link ) then
 			local currencyID = link:match("currency:(%d+)");
@@ -419,7 +423,7 @@ local function MerchantUpdate()
 
 		if ( offset <= numMerchantItems ) then
 			local name, texture, price, quantity, numAvailable, isUsable, extendedCost = GetMerchantItemInfo(item.index);
-			local link = GetMerchantItemLink(item.index);
+			local link = item.link;
 			local r, g, b = 0.5, 0.5, 0.5;
 			local itemType, errormsgs;
 			local subtext = {};
