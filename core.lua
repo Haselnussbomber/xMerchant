@@ -583,7 +583,7 @@ local function MerchantUpdate()
 			button.link = link;
 			button.hasItem = true;
 			button.texture = texture;
-			button:SetID(offset);
+			button:SetID(item.index);
 			button:Show();
 			button:SetAlpha(isSearching and (item.isSearchedItem and 1 or 0.3) or 1);
 		else
