@@ -733,7 +733,9 @@ frame:SetPoint("TOPLEFT", 10, -65);
 local function OnTextChanged(self)
 	searching = self:GetText():trim():lower();
 	MerchantUpdate();
-	FauxScrollFrame_OnVerticalScroll(NuuhMerchantFrame.scrollframe, 0, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, MerchantUpdate);
+	if ( searching ~= "" and searching ~= SEARCH:lower() ) then
+		FauxScrollFrame_OnVerticalScroll(NuuhMerchantFrame.scrollframe, 0, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, MerchantUpdate);
+	end
 end
 
 local function OnShow(self)
