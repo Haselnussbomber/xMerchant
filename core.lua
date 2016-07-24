@@ -351,26 +351,78 @@ local function isMentionedInErrors(errors, text)
 	return false;
 end
 
+local function GetFilteredMerchantItemIndexes()
+	local numMerchantItems = GetMerchantNumItems();
+	local items = {};
+	local isSearching = searching ~= "" and searching ~= SEARCH:lower();
+
+	for i=1, numMerchantItems, 1 do
+		local item = { index = i, isSearchedItem = false };
+		local name = GetMerchantItemInfo(i);
+		local link = GetMerchantItemLink(i);
+
+		if ( isSearching and link ) then
+			local currencyID = link:match("currency:(%d+)");
+
+			if ( currencyID and name:lower():match(searching) ) then
+				item.isSearchedItem = true;
+			elseif ( not currencyID ) then
+				local _, _, itemRarity, _, _, itemType, itemSubType, _, equipSlot = GetItemInfo(link);
+
+				itemRarity = itemRarity or LE_ITEM_QUALITY_COMMON;
+
+				if ( name:lower():match(searching)
+					or ( itemRarity and (
+						tostring(itemRarity):lower():match(searching) or
+						_G["ITEM_QUALITY" .. tostring(itemRarity) .. "_DESC"]:lower():match(searching)
+					) )
+					or ( itemType and itemType:lower():match(searching) )
+					or ( itemSubType and itemSubType:lower():match(searching) )
+					or ( equipSlot and _G[equipSlot] and _G[equipSlot]:lower():match(searching) )
+				) then
+					item.isSearchedItem = true;
+				elseif ( NuuhMerchantFrame.tooltipsearching ) then
+					tooltip:SetOwner(UIParent, "ANCHOR_NONE");
+					tooltip:SetHyperlink(link);
+
+					for i=1, tooltip:NumLines() do
+						if ( _G["NuuhMerchantTooltipTextLeft" .. i]:GetText():lower():match(searching) ) then
+							item.isSearchedItem = true;
+							break;
+						end
+					end
+				end
+			end
+		end
+
+		table.insert(items, item);
+	end
+
+	table.sort(items, function(a, b)
+		return a.isSearchedItem and not b.isSearchedItem;
+	end);
+
+	return numMerchantItems, items, isSearching;
+end
+
 local function MerchantUpdate()
 	local self = NuuhMerchantFrame;
-	local numMerchantItems = GetMerchantNumItems();
+	local numMerchantItems, items, isSearching = GetFilteredMerchantItemIndexes();
 
 	FauxScrollFrame_Update(self.scrollframe, numMerchantItems, NUM_BUTTONS, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, nil, nil, nil, nil, nil, nil, 1);
 
-	local isSearching = searching ~= "" and searching ~= SEARCH:lower();
-
 	for i=1, NUM_BUTTONS, 1 do
 		local offset = i + FauxScrollFrame_GetOffset(self.scrollframe);
+		local item = items[offset];
 		local button = buttons[i];
 		button.hover = nil;
 
 		if ( offset <= numMerchantItems ) then
-			local name, texture, price, quantity, numAvailable, isUsable, extendedCost = GetMerchantItemInfo(offset);
-			local link = GetMerchantItemLink(offset);
+			local name, texture, price, quantity, numAvailable, isUsable, extendedCost = GetMerchantItemInfo(item.index);
+			local link = GetMerchantItemLink(item.index);
 			local r, g, b = 0.5, 0.5, 0.5;
 			local itemType, errormsgs;
 			local subtext = {};
-			local alpha = isSearching and 0.3 or 1;
 
 			if ( numAvailable == 0 ) then
 				button.highlight:SetVertexColor(0.5, 0.5, 0.5, 0.5);
@@ -407,10 +459,6 @@ local function MerchantUpdate()
 					local _, currentAmount, _, earnedThisWeek, weeklyMax, totalMax, _, rarity = GetCurrencyInfo(link);
 
 					button.itemname:SetTextColor(GetItemQualityColor(rarity));
-
-					if ( isSearching and name:lower():match(searching) ) then
-						alpha = 1;
-					end
 
 					if ( weeklyMax and weeklyMax > 0 ) then
 						table.insert(subtext, CURRENCY_WEEKLY_CAP:format("", earnedThisWeek, weeklyMax));
@@ -470,31 +518,6 @@ local function MerchantUpdate()
 						and not (isWeapon or itemSubClassId == LE_ITEM_ARMOR_SHIELD)
 					then
 						table.insert(subtext, _G[equipSlot]);
-					end
-
-					-- search
-					if isSearching then
-						if ( name:lower():match(searching)
-							or ( itemRarity and (
-								tostring(itemRarity):lower():match(searching) or
-								_G["ITEM_QUALITY" .. tostring(itemRarity) .. "_DESC"]:lower():match(searching)
-							) )
-							or ( itemType and itemType:lower():match(searching) )
-							or ( itemSubType and itemSubType:lower():match(searching) )
-							or ( equipSlot and _G[equipSlot] and _G[equipSlot]:lower():match(searching) )
-						) then
-							alpha = 1;
-						elseif ( self.tooltipsearching ) then
-							tooltip:SetOwner(UIParent, "ANCHOR_NONE");
-							tooltip:SetHyperlink(link);
-
-							for i=1, tooltip:NumLines() do
-								if ( _G["NuuhMerchantTooltipTextLeft" .. i]:GetText():lower():match(searching) ) then
-									alpha = 1;
-									break;
-								end
-							end
-						end
 					end
 
 					if itemRarity > LE_ITEM_QUALITY_COMMON and IsAppearanceUnknown(link) then
@@ -562,7 +585,7 @@ local function MerchantUpdate()
 			button.texture = texture;
 			button:SetID(offset);
 			button:Show();
-			button:SetAlpha(alpha);
+			button:SetAlpha(isSearching and (item.isSearchedItem and 1 or 0.3) or 1);
 		else
 			button.price = nil;
 			button.hasItem = nil;
@@ -710,6 +733,7 @@ frame:SetPoint("TOPLEFT", 10, -65);
 local function OnTextChanged(self)
 	searching = self:GetText():trim():lower();
 	MerchantUpdate();
+	FauxScrollFrame_OnVerticalScroll(NuuhMerchantFrame.scrollframe, 0, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, MerchantUpdate);
 end
 
 local function OnShow(self)
