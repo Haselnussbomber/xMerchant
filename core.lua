@@ -158,7 +158,10 @@ local function IsAppearanceUnknown(link)
 	tooltip:SetHyperlink(link);
 
 	for i=1, tooltip:NumLines() do
-		if ( _G["NuuhMerchantTooltipTextLeft" .. i]:GetText() == TRANSMOGRIFY_TOOLTIP_APPEARANCE_UNKNOWN ) then
+		local line = _G["NuuhMerchantTooltipTextLeft" .. i]:GetText();
+		if line == TRANSMOGRIFY_TOOLTIP_APPEARANCE_UNKNOWN
+			or line == TRANSMOGRIFY_STYLE_UNCOLLECTED
+		then
 			return true;
 		end
 	end
