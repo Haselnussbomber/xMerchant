@@ -234,9 +234,9 @@ local function CurrencyUpdate()
 				local count, _, _, _, _, link = select(2, GetContainerItemInfo(bagID, slotID));
 				local existed = false;
 
-				for _, i in ipairs(currencies) do
-					if ( currencies[i] and currencies[i].id == tonumber(itemID) ) then
-						currencies[i].count = currencies[i].count + count;
+				for _, currency in ipairs(currencies) do
+					if ( currency.id == tonumber(itemID) ) then
+						currency.count = currency.count + count;
 						existed = true;
 					end
 				end
