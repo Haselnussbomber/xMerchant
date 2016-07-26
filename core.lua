@@ -406,8 +406,27 @@ local function GetFilteredMerchantItemIndexes()
 	end
 
 	table.sort(items, function(a, b)
-		return a.isSearchedItem and not b.isSearchedItem;
+		return a.index < b.index;
 	end);
+
+	if isSearching then
+		local found = {};
+		local others = {};
+
+		for _, item in ipairs(items) do
+			if (item.isSearchedItem) then
+				table.insert(found, item);
+			else
+				table.insert(others, item);
+			end
+		end
+
+		for _, item in ipairs(others) do
+			table.insert(found, item);
+		end
+
+		items = found;
+	end
 
 	return numMerchantItems, items, isSearching;
 end
