@@ -389,8 +389,8 @@ local function GetFilteredMerchantItemIndexes()
 			link = link
 		};
 
-		item.itemID = tonumber(link:match("item:(%d+)") or 0);
-		item.currencyID = tonumber(link:match("currency:(%d+)") or 0);
+		item.itemID = tonumber((link or "item:0"):match("item:(%d+)") or 0);
+		item.currencyID = tonumber((link or "currency:0"):match("currency:(%d+)") or 0);
 
 		if ( isSearching and link ) then
 			if ( item.currencyID ) then
