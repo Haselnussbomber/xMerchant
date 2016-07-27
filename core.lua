@@ -278,7 +278,7 @@ local function CurrencyUpdate()
 	end
 end
 
-local function UpdateAltCurrency(button, index, i)
+local function UpdateAltCurrency(button, index)
 	local currency_frames = {};
 	local lastFrame;
 	local itemCount = GetMerchantItemCostInfo(index);
@@ -604,7 +604,7 @@ local function MerchantUpdate()
 
 			button.icon:SetTexture(texture);
 
-			UpdateAltCurrency(button, offset, i);
+			UpdateAltCurrency(button, item.index);
 
 			if ( extendedCost and price <= 0 ) then
 				button.price = nil;
