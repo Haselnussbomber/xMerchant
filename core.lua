@@ -11,12 +11,15 @@ local L = xm.L;
 
 local buttons = {};
 local knowns = {};
-local errors = {};
 local factions = {};
 local illusions = {};
 local currencies = {};
-local searching = "";
 local npcName = "";
+local numMerchantItems = 0;
+local items = {};
+local searchText = "";
+local isSearching = false;
+local searchInTooltip = false;
 
 -- "Requires Level %d" to "Requires Level (%d+)"
 local REQUIRES_LEVEL = ITEM_MIN_LEVEL:gsub("%%d", "(%%d+)");
@@ -45,71 +48,84 @@ local ILLUSIONS_LIST = {
 	[138954] = 5364, -- [Illusion: Poisoned]
 };
 
-local function GetError(link, isRecipe)
-	if ( not link ) then
-		return false;
+local function ScanItemTooltip(item)
+	if ( not item.link or item.tooltipScanned ) then
+		return item;
 	end
 
-	local id = link:match("item:(%d+)");
+	item.tooltipScanned = true;
 
-	if ( errors[id] ) then
-		return errors[id];
-	end
+	local isRecipe = item.info.itemType and item.info.itemType == RECIPE;
+	local itemRarity = item.info.itemRarity;
 
 	tooltip:SetOwner(UIParent, "ANCHOR_NONE");
-	tooltip:SetHyperlink(link);
+	tooltip:SetHyperlink(item.link);
 
 	local errormsgs = {};
+	local numLines = tooltip:NumLines();
 
-	for i=2, tooltip:NumLines() do
+	for i=2, numLines do
 		local frame = _G["NuuhMerchantTooltipTextLeft" .. i];
 		local r, g, b = frame:GetTextColor();
 		local text = frame:GetText();
 
-		if ( text and r >= 0.9 and g <= 0.2 and b <= 0.2 and text ~= RETRIEVING_ITEM_INFO ) then
-			local level = text:match(REQUIRES_LEVEL);
+		if ( text and text ~= RETRIEVING_ITEM_INFO ) then
+			if ( r >= 0.9 and g <= 0.2 and b <= 0.2 ) then
+				local level = text:match(REQUIRES_LEVEL);
 
-			if ( level ) then
-				table.insert(errormsgs, LEVEL_GAINED:format(level));
-			end
+				if ( level ) then
+					table.insert(errormsgs, LEVEL_GAINED:format(level));
+				end
 
-			if ( not level ) then
-				local reputation, factionName = text:match(REQUIRES_REPUTATION);
+				if ( not level ) then
+					local reputation, factionName = text:match(REQUIRES_REPUTATION);
 
-				if ( reputation and factionName ) then
-					local standingLabel = factions[factionName];
+					if ( reputation and factionName ) then
+						local standingLabel = factions[factionName];
 
-					if ( standingLabel ) then
-						table.insert(errormsgs, reputation .. " (" .. standingLabel .. ") - " .. factionName);
-					else
-						table.insert(errormsgs, reputation .. " - " .. factionName);
+						if ( standingLabel ) then
+							table.insert(errormsgs, reputation .. " (" .. standingLabel .. ") - " .. factionName);
+						else
+							table.insert(errormsgs, reputation .. " - " .. factionName);
+						end
 					end
+				end
+
+				local skill, slevel = text:match(REQUIRES_SKILL);
+
+				if ( skill and slevel ) then
+					table.insert(errormsgs, AUCTION_MAIL_ITEM_STACK:format(skill, slevel));
+				end
+
+				local requires = text:match(REQUIRES);
+
+				if ( not level and not reputation and not skill and requires ) then
+					table.insert(errormsgs, requires);
+				end
+
+				local classes = text:match(REQUIRES_CLASSES);
+
+				if ( not level and not reputation and not skill and not requires and classes ) then
+					table.insert(errormsgs, classes);
+				end
+
+				if ( text and not level and not reputation and not skill and not requires and not classes ) then
+					table.insert(errormsgs, text);
+				end
+
+				if ( text == ITEM_SPELL_KNOWN ) then
+					item.isKnown = true;
 				end
 			end
 
-			local skill, slevel = text:match(REQUIRES_SKILL);
-
-			if ( skill and slevel ) then
-				table.insert(errormsgs, AUCTION_MAIL_ITEM_STACK:format(skill, slevel));
-			end
-
-			local requires = text:match(REQUIRES);
-
-			if ( not level and not reputation and not skill and requires ) then
-				table.insert(errormsgs, requires);
-			end
-
-			local classes = text:match(REQUIRES_CLASSES);
-
-			if ( not level and not reputation and not skill and not requires and classes ) then
-				table.insert(errormsgs, classes);
-			end
-
-			if ( text and not level and not reputation and not skill and not requires and not classes ) then
-				table.insert(errormsgs, text);
+			if ( itemRarity and itemRarity > LE_ITEM_QUALITY_COMMON
+				and ( text == TRANSMOGRIFY_TOOLTIP_APPEARANCE_UNKNOWN or text == TRANSMOGRIFY_STYLE_UNCOLLECTED ))
+			then
+				item.transmogUncollected = true;
 			end
 		end
 
+		--[[
 		frame = _G["NuuhMerchantTooltipTextRight" .. i];
 		r, g, b = frame:GetTextColor();
 		text = frame:GetText();
@@ -117,65 +133,13 @@ local function GetError(link, isRecipe)
 		if ( text and r >= 0.9 and g <= 0.2 and b <= 0.2 ) then
 			table.insert(errormsgs, text);
 		end
-
-		if ( isRecipe and i == 5 ) then
-			break;
-		end
+		]]--
 	end
 
-	if #errormsgs == 0 then
-		return false;
-	end
+	item.errormsgs = errormsgs;
+	item.hasErrors = #errormsgs > 0;
 
-	errors[id] = errormsgs;
-
-	return errormsgs;
-end
-
-local function GetKnown(link)
-	if ( not link ) then
-		return false;
-	end
-
-	local id = link:match("item:(%d+)");
-
-	if ( knowns[id] ) then
-		return true;
-	end
-
-	tooltip:SetOwner(UIParent, "ANCHOR_NONE");
-	tooltip:SetHyperlink(link);
-
-	for i=1, tooltip:NumLines() do
-		if ( _G["NuuhMerchantTooltipTextLeft" .. i]:GetText() == ITEM_SPELL_KNOWN ) then
-			knowns[id] = true;
-			return true;
-		end
-	end
-
-	return false;
-end
-
-local function IsAppearanceUnknown(link)
-	if ( not link ) then
-		return false;
-	end
-
-	local id = link:match("item:(%d+)");
-
-	tooltip:SetOwner(UIParent, "ANCHOR_NONE");
-	tooltip:SetHyperlink(link);
-
-	for i=1, tooltip:NumLines() do
-		local line = _G["NuuhMerchantTooltipTextLeft" .. i]:GetText();
-		if line == TRANSMOGRIFY_TOOLTIP_APPEARANCE_UNKNOWN
-			or line == TRANSMOGRIFY_STYLE_UNCOLLECTED
-		then
-			return true;
-		end
-	end
-
-	return false;
+	return item;
 end
 
 local function FactionsUpdate()
@@ -375,65 +339,131 @@ local function isMentionedInErrors(errors, text)
 	return false;
 end
 
-local function GetFilteredMerchantItemIndexes()
-	local numMerchantItems = GetMerchantNumItems();
-	local items = {};
-	local isSearching = searching ~= "" and searching ~= SEARCH:lower();
+local function ProcessCurrency(item)
+	local _, currentAmount, _, earnedThisWeek, weeklyMax, totalMax, _, rarity = GetCurrencyInfo(item.link);
 
-	for i=1, numMerchantItems, 1 do
-		local name = GetMerchantItemInfo(i);
-		local link = GetMerchantItemLink(i);
-		local item = {
-			index = i,
-			isSearchedItem = false,
-			link = link
-		};
+	item.info.currentAmount = currentAmount;
+	item.info.earnedThisWeek = earnedThisWeek;
+	item.info.weeklyMax = weeklyMax;
+	item.info.totalMax = totalMax;
+	item.info.rarity = rarity;
 
-		item.itemID = tonumber((link or "item:0"):match("item:(%d+)") or 0);
-		item.currencyID = tonumber((link or "currency:0"):match("currency:(%d+)") or 0);
+	if ( weeklyMax and weeklyMax > 0 ) then
+		table.insert(item.subtext, CURRENCY_WEEKLY_CAP:format("", earnedThisWeek, weeklyMax));
+	elseif ( totalMax and totalMax ) then
+		table.insert(item.subtext, CURRENCY_TOTAL_CAP:format("", currentAmount, totalMax));
+	end
 
-		if ( isSearching and link ) then
-			if ( item.currencyID ) then
-				if name:lower():match(searching) then
-					item.isSearchedItem = true;
-				end
-			else
-				local _, _, itemRarity, _, _, itemType, itemSubType, _, equipSlot = GetItemInfo(link);
+	return item;
+end
 
-				itemRarity = itemRarity or LE_ITEM_QUALITY_COMMON;
+local function ProcessItem(item)
+	local _, _, itemRarity, iLevel, _, itemType, itemSubType, _, equipSlot, _, _, itemClassId, itemSubClassId = GetItemInfo(item.link);
 
-				if ( name:lower():match(searching)
-					or ( itemRarity and (
-						tostring(itemRarity):lower():match(searching) or
-						_G["ITEM_QUALITY" .. tostring(itemRarity) .. "_DESC"]:lower():match(searching)
-					) )
-					or ( itemType and itemType:lower():match(searching) )
-					or ( itemSubType and itemSubType:lower():match(searching) )
-					or ( equipSlot and _G[equipSlot] and _G[equipSlot]:lower():match(searching) )
-				) then
-					item.isSearchedItem = true;
-				elseif ( NuuhMerchantFrame.tooltipsearching ) then
-					tooltip:SetOwner(UIParent, "ANCHOR_NONE");
-					tooltip:SetHyperlink(link);
+	itemRarity = ( itemRarity or LE_ITEM_QUALITY_COMMON );
 
-					for i=1, tooltip:NumLines() do
-						if ( _G["NuuhMerchantTooltipTextLeft" .. i]:GetText():lower():match(searching) ) then
-							item.isSearchedItem = true;
-							break;
-						end
+	item.info.itemRarity = itemRarity;
+	item.info.iLevel = iLevel;
+	item.info.itemType = itemType;
+	item.info.itemSubType = itemSubType;
+	item.info.equipSlot = equipSlot;
+	item.info.itemClassId = itemClassId;
+	item.info.itemSubClassId = itemSubClassId;
+
+	local isEquippable = IsEquippableItem(item.link);
+	local isWeapon = (itemClassId == LE_ITEM_CLASS_WEAPON);
+	local isArmor = (itemClassId == LE_ITEM_CLASS_ARMOR);
+
+	-- item level
+	if isEquippable
+		and iLevel
+		and not (itemRarity == 7 and iLevel == 1) -- don't show if heirloom and ilvl == 1
+		and equipSlot ~= "INVTYPE_TABARD"
+		and equipSlot ~= "INVTYPE_BAG"
+		and equipSlot ~= "INVTYPE_BODY"
+	then
+		table.insert(item.subtext, tostring(iLevel));
+	end
+
+	-- item type
+	if isWeapon or isArmor then
+		local isGeneric = (itemSubClassId == LE_ITEM_ARMOR_GENERIC); -- neck, finger, trinket, holdable...
+		local isCloak = (equipSlot == "INVTYPE_CLOAK");
+		local isBag = (equipSlot == "INVTYPE_BAG");
+
+		if not (isArmor and (isGeneric or isCloak or isBag)) then
+			local name = GetItemSubClassInfo(itemClassId, itemSubClassId);
+			table.insert(item.subtext, name);
+		end
+	else
+		if not item.hasErrors or not isMentionedInErrors(item.errormsgs, itemSubType) then
+			table.insert(item.subtext, itemSubType);
+		end
+	end
+
+	-- equip slot
+	if isEquippable
+		and equipSlot
+		and equipSlot ~=""
+		and _G[equipSlot] ~= itemSubType
+		and not (isWeapon or itemSubClassId == LE_ITEM_ARMOR_SHIELD)
+	then
+		table.insert(item.subtext, _G[equipSlot]);
+	end
+
+	-- transmog: illusions
+	if ( item.itemID and ILLUSIONS_LIST[item.itemID] ) then
+		item.transmogIsIllusion = true;
+		item.transmogIsIllusionKnown = ( illusions[ILLUSIONS_LIST[item.itemID]] == false );
+	end
+
+	return item;
+end
+
+local function TextMatchesSearch(text)
+	return text and text:lower():match(searchText) and true or false;
+end
+
+local function ProcessSearch(item)
+	item.isSearchedItem = false;
+
+	if ( isSearching ) then
+		if ( item.currencyID > 0 ) then
+			if ( TextMatchesSearch(item.info.name) ) then
+				item.isSearchedItem = true;
+			end
+		else
+			if (
+				TextMatchesSearch(item.info.name)
+				or ( item.info.itemRarity and TextMatchesSearch(_G["ITEM_QUALITY" .. tostring(item.info.itemRarity) .. "_DESC"]) )
+				or ( TextMatchesSearch(item.info.itemType) )
+				or ( TextMatchesSearch(item.info.itemSubType) )
+				or ( item.info.equipSlot and TextMatchesSearch(_G[item.info.equipSlot]) )
+			) then
+				item.isSearchedItem = true;
+			elseif ( searchInTooltip ) then
+				tooltip:SetOwner(UIParent, "ANCHOR_NONE");
+				tooltip:SetHyperlink(item.link);
+
+				for i=1, tooltip:NumLines() do
+					if ( _G["NuuhMerchantTooltipTextLeft" .. i]:GetText():lower():match(searchText) ) then
+						item.isSearchedItem = true;
+						break;
 					end
 				end
 			end
 		end
-
-		table.insert(items, item);
 	end
 
+	return item;
+end
+
+local function SortItems()
 	table.sort(items, function(a, b)
 		return a.index < b.index;
 	end);
 
-	if isSearching then
+	if ( isSearching ) then
 		local found = {};
 		local others = {};
 
@@ -451,13 +481,83 @@ local function GetFilteredMerchantItemIndexes()
 
 		items = found;
 	end
+end
 
-	return numMerchantItems, items, isSearching;
+local function UpdateSearch()
+	for i=1, numMerchantItems, 1 do
+		items[i] = ProcessSearch(items[i]);
+	end
+
+	SortItems();
+end
+
+local function UpdateMerchantItems()
+	numMerchantItems = GetMerchantNumItems();
+	wipe(items);
+
+	for i=1, numMerchantItems, 1 do
+		local name, texture, price, quantity, numAvailable, isUsable, extendedCost = GetMerchantItemInfo(i);
+		local link = GetMerchantItemLink(i);
+
+		local item = {
+			index = i,
+			isSearchedItem = false,
+			transmogUncollected = false,
+			transmogIsIllusion = false,
+			transmogIsIllusionKnown = false,
+			hasErrors = false,
+			isKnown = false,
+			link = link,
+			itemID = 0,
+			currencyID = 0,
+			subtext = {},
+			info = {
+				name = name,
+				texture = texture,
+				price = price,
+				quantity = quantity,
+				numAvailable = numAvailable,
+				isUsable = isUsable,
+				extendedCost = extendedCost
+			}
+		};
+
+		if ( link ) then
+			item.itemID = tonumber(link:match("item:(%d+)") or 0);
+			item.currencyID = tonumber(link:match("currency:(%d+)") or 0);
+
+			if ( item.currencyID > 0 ) then
+				item = ProcessCurrency(item);
+			else
+				item = ProcessItem(item);
+			end
+
+			item = ScanItemTooltip(item);
+
+			if ( item.transmogIsIllusionKnown ) then
+				table.insert(item.errormsgs, ITEM_SPELL_KNOWN);
+				item.hasErrors = true;
+			end
+
+			if ( item.hasErrors ) then
+				table.insert(item.subtext, "|cffd00000" .. table.concat(item.errormsgs, " - ") .. "|r");
+			end
+		end
+
+		table.insert(items, item);
+	end
+
+	UpdateSearch();
+end
+
+local function setButtonHighlight(button, a, r, g, b)
+	button.highlight:SetVertexColor(a, r, g, b);
+	button.highlight:Show();
+	button.isShown = 1;
 end
 
 local function MerchantUpdate()
 	local self = NuuhMerchantFrame;
-	local numMerchantItems, items, isSearching = GetFilteredMerchantItemIndexes();
 
 	FauxScrollFrame_Update(self.scrollframe, numMerchantItems, NUM_BUTTONS, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, nil, nil, nil, nil, nil, nil, 1);
 
@@ -467,160 +567,70 @@ local function MerchantUpdate()
 		local button = buttons[i];
 		button.hover = nil;
 
-		if ( offset <= numMerchantItems ) then
-			local name, texture, price, quantity, numAvailable, isUsable, extendedCost = GetMerchantItemInfo(item.index);
-			local link = item.link;
+		if ( item and item.link and offset <= numMerchantItems ) then
 			local r, g, b = 0.5, 0.5, 0.5;
-			local itemType, errormsgs;
-			local subtext = {};
 
-			if ( numAvailable == 0 ) then
-				button.highlight:SetVertexColor(0.5, 0.5, 0.5, 0.5);
-				button.highlight:Show();
-				button.isShown = 1;
-			elseif ( not isUsable ) then
-				button.highlight:SetVertexColor(1, 0.2, 0.2, 0.5);
-				button.highlight:Show();
-				button.isShown = 1;
+			-- not in stock
+			if ( item.info.numAvailable == 0 ) then
+				setButtonHighlight(button, 0.5, 0.5, 0.5, 0.5);
 
-				errormsgs = GetError(link, itemType and itemType == RECIPE);
-			elseif ( itemType and itemType == RECIPE and not GetKnown(link) ) then
-				button.highlight:SetVertexColor(0.2, 1, 0.2, 0.5);
-				button.highlight:Show();
-				button.isShown = 1;
+			-- not useable
+			elseif ( not item.info.isUsable ) then
+				setButtonHighlight(button, 1, 0.2, 0.2, 0.5);
+
+			-- recipe and not known
+			elseif ( item.info.itemType and item.info.itemType == RECIPE and not item.isKnown ) then
+				setButtonHighlight(button, 0.2, 1, 0.2, 0.5);
+
 			else
 				button.highlight:SetVertexColor(r, g, b, 0.5);
 				button.highlight:Hide();
 				button.isShown = nil;
 
-				errormsgs = GetError(link, itemType and itemType == RECIPE);
-
-				if errormsgs and GetKnown(link) then
-					button.highlight:SetVertexColor(1, 0.2, 0.2, 0.5);
-					button.highlight:Show();
-					button.isShown = 1;
+				if item.hasErrors and item.isKnown then
+					setButtonHighlight(button, 1, 0.2, 0.2, 0.5);
 				end
 			end
 
-			if ( link ) then
-				local currencyID = link:match("currency:(%d+)");
+			local qr, qg, qb = GetItemQualityColor(item.info.itemRarity or item.info.rarity);
 
-				if ( currencyID ) then
-					local _, currentAmount, _, earnedThisWeek, weeklyMax, totalMax, _, rarity = GetCurrencyInfo(link);
-
-					button.itemname:SetTextColor(GetItemQualityColor(rarity));
-
-					if ( weeklyMax and weeklyMax > 0 ) then
-						table.insert(subtext, CURRENCY_WEEKLY_CAP:format("", earnedThisWeek, weeklyMax));
-					elseif ( totalMax and totalMax ) then
-						table.insert(subtext, CURRENCY_TOTAL_CAP:format("", currentAmount, totalMax));
-					end
+			if ( item.currencyID == 0 ) then
+				if ( item.hasErrors ) then
+					r, g, b = 1, 0.3, 0.3;
 				else
-					local _, itemRarity, iLevel, itemSubType, equipSlot, itemClassId, itemSubClassId;
-					_, _, itemRarity, iLevel, _, itemType, itemSubType, _, equipSlot, _, _, itemClassId, itemSubClassId = GetItemInfo(link);
+					r, g, b = qr, qg, qb;
+				end
 
-					local isWeapon = (itemClassId == LE_ITEM_CLASS_WEAPON);
-					local isArmor = (itemClassId == LE_ITEM_CLASS_ARMOR);
-
-					itemRarity = itemRarity or LE_ITEM_QUALITY_COMMON;
-
-					local qr, qg, qb = GetItemQualityColor(itemRarity);
-					button.itemname:SetTextColor(qr, qg, qb);
-
-					if not errormsgs then
-						r, g, b = qr, qg, qb;
-					else
-						r, g, b = 1, 0.3, 0.3;
-					end
-
-					-- item level
-					if IsEquippableItem(link)
-						and iLevel
-						and not (itemRarity == 7 and iLevel == 1) -- don't show if heirloom and ilvl == 1
-						and equipSlot ~= "INVTYPE_TABARD"
-						and equipSlot ~= "INVTYPE_BAG"
-						and equipSlot ~= "INVTYPE_BODY"
-					then
-						table.insert(subtext, tostring(iLevel));
-					end
-
-					-- item type
-					if isWeapon or isArmor then
-						local isGeneric = (itemSubClassId == LE_ITEM_ARMOR_GENERIC); -- neck, finger, trinket, holdable...
-						local isCloak = (equipSlot == "INVTYPE_CLOAK");
-						local isBag = (equipSlot == "INVTYPE_BAG");
-
-						if not (isArmor and (isGeneric or isCloak or isBag)) then
-							local name = GetItemSubClassInfo(itemClassId, itemSubClassId);
-							table.insert(subtext, name);
-						end
-					else
-						if not errormsgs or not isMentionedInErrors(errormsgs, itemSubType) then
-							table.insert(subtext, itemSubType);
-						end
-					end
-
-					-- equip slot
-					if IsEquippableItem(link)
-						and equipSlot
-						and equipSlot ~=""
-						and _G[equipSlot] ~= itemSubType
-						and not (isWeapon or itemSubClassId == LE_ITEM_ARMOR_SHIELD)
-					then
-						table.insert(subtext, _G[equipSlot]);
-					end
-
-					-- transmog
-					if itemRarity > LE_ITEM_QUALITY_COMMON and IsAppearanceUnknown(link) then
-						button.highlight:SetVertexColor(0.8, 0.4, 0.8, 0.5);
-						button.highlight:Show();
-						button.isShown = 1;
-						r, g, b = 0.9, 0.5, 0.9
-					end
-
-					-- transmog: illusions
-					if item.itemID and ILLUSIONS_LIST[item.itemID] then
-						if illusions[ILLUSIONS_LIST[item.itemID]] == false then -- not isCollected
-							button.highlight:SetVertexColor(0.8, 0.4, 0.8, 0.5);
-							button.highlight:Show();
-							button.isShown = 1;
-							r, g, b = 0.9, 0.5, 0.9
-						else -- already known
-							button.highlight:SetVertexColor(1, 0.2, 0.2, 0.5);
-							button.highlight:Show();
-							button.isShown = 1;
-							r, g, b = 1, 0.3, 0.3;
-							table.insert(subtext, tostring("|cffff0000" .. ITEM_SPELL_KNOWN .. "|r"));
-						end
-					end
+				if ( item.transmogUncollected or ( item.transmogIsIllusion and item.transmogIsIllusionKnown ) ) then
+					setButtonHighlight(button, 0.8, 0.4, 0.8, 0.5);
+					r, g, b = 0.9, 0.5, 0.9
 				end
 			end
+
+			button.itemname:SetTextColor(qr, qg, qb);
 
 			button.itemname:SetText(
-				(numAvailable >= 0 and "|cffffffff[" .. numAvailable .. "]|r " or "") ..
-				(quantity > 1 and "|cffffffff" .. quantity .. "x|r " or "") ..
-				(name or "|cffff0000" .. RETRIEVING_ITEM_INFO)
+				(item.info.numAvailable >= 0 and "|cffffffff[" .. item.info.numAvailable .. "]|r " or "") ..
+				(item.info.quantity > 1 and "|cffffffff" .. item.info.quantity .. "x|r " or "") ..
+				(item.info.name or "|cffff0000" .. RETRIEVING_ITEM_INFO)
 			);
 
-			button.icon:SetTexture(texture);
+			button.icon:SetTexture(item.info.texture);
 
 			UpdateAltCurrency(button, item.index);
 
-			if ( extendedCost and price <= 0 ) then
-				button.price = nil;
+			if ( item.info.extendedCost and item.info.price <= 0 ) then
 				button.extendedCost = true;
 				button.money:SetText("");
-			elseif ( extendedCost and price > 0 ) then
-				button.price = price;
+			elseif ( item.info.extendedCost and item.info.price > 0 ) then
 				button.extendedCost = true;
-				button.money:SetText(GetMoneyString(price, true));
+				button.money:SetText(GetMoneyString(item.info.price, true));
 			else
-				button.price = price;
 				button.extendedCost = nil;
-				button.money:SetText(GetMoneyString(price, true));
+				button.money:SetText(GetMoneyString(item.info.price, true));
 			end
 
-			if ( GetMoney() < price ) then
+			if ( GetMoney() < item.info.price ) then
 				button.money:SetTextColor(1, 0, 0);
 			else
 				button.money:SetTextColor(1, 1, 1);
@@ -636,35 +646,32 @@ local function MerchantUpdate()
 
 			button.itemname:SetWidth(textWidth);
 			button.iteminfo:SetWidth(textWidth);
-
-			if errormsgs then
-				table.insert(subtext, "|cffd00000" .. table.concat(errormsgs, " - ") .. "|r");
-			end
-
-			button.iteminfo:SetText(table.concat(subtext, " - ") or "");
+			button.iteminfo:SetText(table.concat(item.subtext, " - ") or "");
 
 			button.r = r;
 			button.g = g;
 			button.b = b;
-			button.link = link;
 			button.hasItem = true;
-			button.texture = texture;
 			button:SetID(item.index);
-			button:Show();
 			button:SetAlpha(isSearching and (item.isSearchedItem and 1 or 0.3) or 1);
+			button:Show();
 		else
-			button.price = nil;
 			button.hasItem = nil;
 			button:Hide();
 		end
+
 		if ( button.hasStackSplit == 1 ) then
 			StackSplitFrame:Hide();
 		end
 	end
 end
 
+local function ScrollToOffset(offset)
+	FauxScrollFrame_OnVerticalScroll(NuuhMerchantFrame.scrollframe, offset, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, MerchantUpdate);
+end
+
 local function OnVerticalScroll(self, offset)
-	FauxScrollFrame_OnVerticalScroll(self, offset, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, MerchantUpdate);
+	ScrollToOffset(offset);
 end
 
 local function OnClick(self, button)
@@ -785,6 +792,7 @@ local function OnEvent(self, event, ...)
 		CurrencyUpdate();
 		FactionsUpdate();
 		IllusionsUpdate();
+		UpdateMerchantItems();
 		MerchantUpdate();
 	end
 end
@@ -798,16 +806,20 @@ frame:SetHeight(294);
 frame:SetPoint("TOPLEFT", 10, -65);
 
 local function OnTextChanged(self)
-	searching = self:GetText():trim():lower();
+	searchText = self:GetText():trim():lower();
+	isSearching = searchText ~= "" and searchText ~= SEARCH:lower();
+
+	UpdateSearch();
 	MerchantUpdate();
-	if ( searching ~= "" and searching ~= SEARCH:lower() ) then
-		FauxScrollFrame_OnVerticalScroll(NuuhMerchantFrame.scrollframe, 0, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, MerchantUpdate);
+
+	if ( isSearching ) then
+		ScrollToOffset(0);
 	end
 end
 
 local function OnShow(self)
 	self:SetText(SEARCH);
-	searching = "";
+	searchText = "";
 end
 
 local function OnEnterPressed(self)
@@ -817,15 +829,15 @@ end
 local function OnEscapePressed(self)
 	self:ClearFocus();
 	self:SetText(SEARCH);
-	searching = "";
+	searchText = "";
 end
 
 local function OnEditFocusLost(self)
 	self:HighlightText(0, 0);
 
-	if ( strtrim(self:GetText()) == "" ) then
+	if ( self:GetText():trim() == "" ) then
 		self:SetText(SEARCH);
-		searching = "";
+		searchText = "";
 	end
 end
 
@@ -853,15 +865,11 @@ search:SetScript("OnEditFocusGained", OnEditFocusGained);
 search:SetText(SEARCH);
 
 local function Search_OnClick(self)
-	if ( self:GetChecked() ) then
-		PlaySound("igMainMenuOptionCheckBoxOn");
-		frame.tooltipsearching = 1;
-	else
-		PlaySound("igMainMenuOptionCheckBoxOff");
-		frame.tooltipsearching = nil;
-	end
+	searchInTooltip = self:GetChecked();
+	PlaySound("igMainMenuOptionCheckBox" .. (searchInTooltip and "On" or "Off"));
 
-	if ( searching ~= "" and searching ~= SEARCH:lower() ) then
+	if ( isSearching ) then
+		UpdateSearch();
 		MerchantUpdate();
 	end
 end
@@ -995,9 +1003,20 @@ for i=1, NUM_BUTTONS, 1 do
 	buttons[i] = button;
 end
 
-local function Update()
-	if MerchantNameText:GetText() ~= npcName then
-		FauxScrollFrame_OnVerticalScroll(NuuhMerchantFrame.scrollframe, 0, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, MerchantUpdate);
+hooksecurefunc("MerchantFrame_Update", function()
+	if ( MerchantNameText:GetText() ~= npcName ) then
+		if npcName ~= "" then
+			-- frame was open, but npc changed
+			PlaySound("igCharacterInfoOpen");
+		end
+
+		ScrollToOffset(0);
+		CurrencyUpdate();
+		FactionsUpdate();
+		IllusionsUpdate();
+		UpdateMerchantItems();
+		MerchantUpdate();
+		frame:Show();
 	end
 
 	npcName = UnitName("NPC");
@@ -1006,12 +1025,6 @@ local function Update()
 		for i=1, 12, 1 do
 			_G["MerchantItem" .. i]:Hide();
 		end
-
-		frame:Show();
-		CurrencyUpdate();
-		FactionsUpdate();
-		IllusionsUpdate();
-		MerchantUpdate();
 	else
 		frame:Hide();
 
@@ -1023,18 +1036,15 @@ local function Update()
 			StackSplitFrame:Hide();
 		end
 	end
-end
+end);
 
-hooksecurefunc("MerchantFrame_Update", Update);
-
-local function OnHide()
-	wipe(errors);
+MerchantFrame:HookScript("OnHide", function()
+	wipe(factions);
 	wipe(currencies);
 	wipe(illusions);
+	wipe(items);
 	npcName = "";
-end
-
-hooksecurefunc("MerchantFrame_OnHide", OnHide);
+end);
 
 MerchantBuyBackItem:ClearAllPoints();
 MerchantBuyBackItem:SetPoint("BOTTOMLEFT", 175, 32);
