@@ -13,6 +13,7 @@ local buttons = {};
 local knowns = {};
 local errors = {};
 local factions = {};
+local illusions = {};
 local currencies = {};
 local searching = "";
 local npcName = "";
@@ -35,6 +36,14 @@ local REQUIRES = ITEM_REQ_SKILL:gsub("%%1?$?s", "(.*)");
 local tooltip = CreateFrame("GameTooltip", "NuuhMerchantTooltip", UIParent, "GameTooltipTemplate");
 
 local NUM_BUTTONS = 8;
+
+-- Only illusions we can buy
+local ILLUSIONS_LIST = {
+	-- [itemID] = sourceID
+	[138796] = 3225, -- [Illusion: Executioner]
+	[138803] = 4066, -- [Illusion: Mending]
+	[138954] = 5364, -- [Illusion: Poisoned]
+};
 
 local function GetError(link, isRecipe)
 	if ( not link ) then
@@ -187,6 +196,18 @@ local function FactionsUpdate()
 
 			factions[name] = standingLabel;
 	 	end
+	end
+end
+
+local function IllusionsUpdate()
+	wipe(illusions);
+
+	local list = C_TransmogCollection.GetIllusions();
+
+	for i = 1, #list do
+		if ( list[i] and list[i].sourceID ) then
+			illusions[list[i].sourceID] = list[i].isCollected;
+		end
 	end
 end
 
@@ -368,12 +389,15 @@ local function GetFilteredMerchantItemIndexes()
 			link = link
 		};
 
-		if ( isSearching and link ) then
-			local currencyID = link:match("currency:(%d+)");
+		item.itemID = tonumber(link:match("item:(%d+)") or 0);
+		item.currencyID = tonumber(link:match("currency:(%d+)") or 0);
 
-			if ( currencyID and name:lower():match(searching) ) then
-				item.isSearchedItem = true;
-			elseif ( not currencyID ) then
+		if ( isSearching and link ) then
+			if ( item.currencyID ) then
+				if name:lower():match(searching) then
+					item.isSearchedItem = true;
+				end
+			else
 				local _, _, itemRarity, _, _, itemType, itemSubType, _, equipSlot = GetItemInfo(link);
 
 				itemRarity = itemRarity or LE_ITEM_QUALITY_COMMON;
@@ -546,12 +570,28 @@ local function MerchantUpdate()
 						table.insert(subtext, _G[equipSlot]);
 					end
 
+					-- transmog
 					if itemRarity > LE_ITEM_QUALITY_COMMON and IsAppearanceUnknown(link) then
 						button.highlight:SetVertexColor(0.8, 0.4, 0.8, 0.5);
 						button.highlight:Show();
 						button.isShown = 1;
-
 						r, g, b = 0.9, 0.5, 0.9
+					end
+
+					-- transmog: illusions
+					if item.itemID and ILLUSIONS_LIST[item.itemID] then
+						if illusions[ILLUSIONS_LIST[item.itemID]] == false then -- not isCollected
+							button.highlight:SetVertexColor(0.8, 0.4, 0.8, 0.5);
+							button.highlight:Show();
+							button.isShown = 1;
+							r, g, b = 0.9, 0.5, 0.9
+						else -- already known
+							button.highlight:SetVertexColor(1, 0.2, 0.2, 0.5);
+							button.highlight:Show();
+							button.isShown = 1;
+							r, g, b = 1, 0.3, 0.3;
+							table.insert(subtext, tostring("|cffff0000" .. ITEM_SPELL_KNOWN .. "|r"));
+						end
 					end
 				end
 			end
@@ -744,6 +784,7 @@ local function OnEvent(self, event, ...)
 	if ( event == "BAG_UPDATE_DELAYED" ) then
 		CurrencyUpdate();
 		FactionsUpdate();
+		IllusionsUpdate();
 		MerchantUpdate();
 	end
 end
@@ -969,6 +1010,7 @@ local function Update()
 		frame:Show();
 		CurrencyUpdate();
 		FactionsUpdate();
+		IllusionsUpdate();
 		MerchantUpdate();
 	else
 		frame:Hide();
@@ -988,6 +1030,7 @@ hooksecurefunc("MerchantFrame_Update", Update);
 local function OnHide()
 	wipe(errors);
 	wipe(currencies);
+	wipe(illusions);
 	npcName = "";
 end
 
