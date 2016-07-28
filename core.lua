@@ -386,7 +386,7 @@ local function ProcessItem(item)
 	end
 
 	-- item type
-	if isWeapon or isArmor then
+	if ( isWeapon or isArmor ) then
 		local isGeneric = (itemSubClassId == LE_ITEM_ARMOR_GENERIC); -- neck, finger, trinket, holdable...
 		local isCloak = (equipSlot == "INVTYPE_CLOAK");
 		local isBag = (equipSlot == "INVTYPE_BAG");
@@ -559,10 +559,22 @@ local function UpdateMerchantItems()
 	UpdateSearch();
 end
 
-local function setButtonHighlight(button, a, r, g, b)
-	button.highlight:SetVertexColor(a, r, g, b);
+local function resetButtonBackgroundColor(button)
+	button.highlight:SetVertexColor(0.5, 0.5, 0.5);
+	button.highlight:Hide();
+	button.isShown = nil;
+end
+
+local function setButtonBackgroundColor(button, r, g, b)
+	button.highlight:SetVertexColor(r, g, b);
 	button.highlight:Show();
 	button.isShown = 1;
+end
+
+local function setButtonHoverColor(button, r, g, b)
+	button.r = r;
+	button.g = g;
+	button.b = b;
 end
 
 local function MerchantUpdate()
@@ -575,42 +587,39 @@ local function MerchantUpdate()
 		button.hover = nil;
 
 		if ( item and item.link and offset <= numMerchantItems ) then
-			local r, g, b = 0.5, 0.5, 0.5;
+			local qr, qg, qb = GetItemQualityColor(item.info.itemRarity or item.info.rarity);
+			local moneyWidth = 0;
+
+			resetButtonBackgroundColor(button);
+			setButtonHoverColor(button, 0.5, 0.5, 0.5);
 
 			-- not in stock
 			if ( item.info.numAvailable == 0 ) then
-				setButtonHighlight(button, 0.5, 0.5, 0.5, 0.5);
+				setButtonBackgroundColor(button, 0.5, 0.5, 0.5); -- grey
 
 			-- not useable
 			elseif ( not item.info.isUsable ) then
-				setButtonHighlight(button, 1, 0.2, 0.2, 0.5);
+				setButtonBackgroundColor(button, 1, 0.2, 0.2); -- red
 
 			-- recipe and not known
 			elseif ( item.info.itemType and item.info.itemType == RECIPE and not item.isKnown ) then
-				setButtonHighlight(button, 0.2, 1, 0.2, 0.5);
+				setButtonBackgroundColor(button, 0.2, 1, 0.2); -- green
 
-			else
-				button.highlight:SetVertexColor(r, g, b, 0.5);
-				button.highlight:Hide();
-				button.isShown = nil;
-
-				if item.hasErrors and item.isKnown then
-					setButtonHighlight(button, 1, 0.2, 0.2, 0.5);
-				end
+			-- errors and known
+			elseif item.hasErrors and item.isKnown then
+				setButtonBackgroundColor(button, 1, 0.2, 0.2); -- red
 			end
-
-			local qr, qg, qb = GetItemQualityColor(item.info.itemRarity or item.info.rarity);
 
 			if ( item.currencyID == 0 ) then
 				if ( item.hasErrors ) then
-					r, g, b = 1, 0.3, 0.3;
+					setButtonHoverColor(button, 1, 0.2, 0.2); -- red
 				else
-					r, g, b = qr, qg, qb;
+					setButtonHoverColor(button, qr, qg, qb); -- item quality color
 				end
 
 				if ( item.transmogUncollected or ( item.transmogIsIllusion and item.transmogIsIllusionKnown ) ) then
-					setButtonHighlight(button, 0.8, 0.4, 0.8, 0.5);
-					r, g, b = 0.9, 0.5, 0.9
+					setButtonBackgroundColor(button, 0.8, 0.4, 0.8); -- purple
+					setButtonHoverColor(button, 0.9, 0.5, 0.9); -- lighter purple
 				end
 			end
 
@@ -643,8 +652,6 @@ local function MerchantUpdate()
 				button.money:SetTextColor(1, 1, 1);
 			end
 
-			local moneyWidth = 0;
-
 			for i,frame in ipairs(button.currency_frames) do
 				moneyWidth = moneyWidth + frame:GetWidth();
 			end
@@ -655,9 +662,6 @@ local function MerchantUpdate()
 			button.iteminfo:SetWidth(textWidth);
 			button.iteminfo:SetText(table.concat(item.subtext, " - ") or "");
 
-			button.r = r;
-			button.g = g;
-			button.b = b;
 			button.hasItem = true;
 			button:SetID(item.index);
 			button:SetAlpha(isSearching and (item.isSearchedItem and 1 or 0.3) or 1);
@@ -687,8 +691,8 @@ end
 
 local function OnEnter(self)
 	if ( self.isShown and not self.hover ) then
-		self.oldr, self.oldg, self.oldb, self.olda = self.highlight:GetVertexColor();
-		self.highlight:SetVertexColor(self.r, self.g, self.b, self.olda);
+		self.oldr, self.oldg, self.oldb = self.highlight:GetVertexColor();
+		self.highlight:SetVertexColor(self.r, self.g, self.b);
 		self.hover = 1;
 	else
 		self.highlight:Show();
@@ -699,7 +703,7 @@ end
 
 local function OnLeave(self)
 	if ( self.isShown ) then
-		self.highlight:SetVertexColor(self.oldr, self.oldg, self.oldb, self.olda);
+		self.highlight:SetVertexColor(self.oldr, self.oldg, self.oldb);
 		self.hover = nil;
 	else
 		self.highlight:Hide();
@@ -726,8 +730,8 @@ local function Item_OnEnter(self)
 	local parent = self:GetParent();
 
 	if ( parent.isShown and not parent.hover ) then
-		parent.oldr, parent.oldg, parent.oldb, parent.olda = parent.highlight:GetVertexColor();
-		parent.highlight:SetVertexColor(parent.r, parent.g, parent.b, parent.olda);
+		parent.oldr, parent.oldg, parent.oldb = parent.highlight:GetVertexColor();
+		parent.highlight:SetVertexColor(parent.r, parent.g, parent.b);
 		parent.hover = 1;
 	else
 		parent.highlight:Show();
@@ -761,7 +765,7 @@ local function Item_OnLeave(self)
 	local parent = self:GetParent();
 
 	if ( parent.isShown ) then
-		parent.highlight:SetVertexColor(parent.oldr, parent.oldg, parent.oldb, parent.olda);
+		parent.highlight:SetVertexColor(parent.oldr, parent.oldg, parent.oldb);
 		parent.hover = nil;
 	else
 		parent.highlight:Hide();
@@ -947,6 +951,7 @@ for i=1, NUM_BUTTONS, 1 do
 	local highlight = button:CreateTexture("$parentHighlight", "BACKGROUND");
 	button.highlight = highlight;
 	highlight:SetAllPoints();
+	highlight:SetAlpha(0.5);
 	highlight:SetBlendMode("ADD");
 	highlight:SetTexture("Interface\\Buttons\\UI-Listbox-Highlight2");
 	highlight:Hide();
