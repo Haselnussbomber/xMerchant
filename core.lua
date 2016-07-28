@@ -1025,6 +1025,11 @@ for i=1, NUM_BUTTONS, 1 do
 	buttons[i] = button;
 end
 
+hooksecurefunc("MerchantFrame_SetFilter", function()
+	UpdateMerchantItems();
+	MerchantUpdate();
+end);
+
 hooksecurefunc("MerchantFrame_Update", function()
 	if ( MerchantNameText:GetText() ~= npcName ) then
 		if npcName ~= "" then
