@@ -676,12 +676,8 @@ local function MerchantUpdate()
 	end
 end
 
-local function ScrollToOffset(offset)
-	FauxScrollFrame_OnVerticalScroll(NuuhMerchantFrame.scrollframe, offset, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, MerchantUpdate);
-end
-
 local function OnVerticalScroll(self, offset)
-	ScrollToOffset(offset);
+	FauxScrollFrame_OnVerticalScroll(NuuhMerchantFrame.scrollframe, offset, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, MerchantUpdate);
 end
 
 local function OnClick(self, button)
@@ -823,7 +819,7 @@ local function OnTextChanged(self)
 	MerchantUpdate();
 
 	if ( isSearching ) then
-		ScrollToOffset(0);
+		FauxScrollFrame_OnVerticalScroll(NuuhMerchantFrame.scrollframe, 0, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, function() end);
 	end
 end
 
@@ -1020,7 +1016,7 @@ hooksecurefunc("MerchantFrame_Update", function()
 			PlaySound("igCharacterInfoOpen");
 		end
 
-		ScrollToOffset(0);
+		FauxScrollFrame_OnVerticalScroll(NuuhMerchantFrame.scrollframe, 0, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, function() end);
 		CurrencyUpdate();
 		FactionsUpdate();
 		IllusionsUpdate();
