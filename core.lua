@@ -697,8 +697,15 @@ local function MerchantUpdate()
 			button.iteminfo:SetWidth(textWidth);
 			button.iteminfo:SetText(table.concat(item.subtext, " - ") or "");
 
+			-- used by refund confirmation popups
+			button.name = item.info.name;
+			button.link = item.link;
+			button.texture = item.info.texture;
 			button.hasItem = true;
+
+			-- used to buy item
 			button:SetID(item.index);
+
 			button:SetAlpha(isSearching and (item.isSearchedItem and 1 or 0.3) or 1);
 			button:Show();
 		else
