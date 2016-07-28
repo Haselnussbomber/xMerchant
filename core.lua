@@ -55,8 +55,7 @@ local function ScanItemTooltip(item)
 
 	item.tooltipScanned = true;
 
-	local isRecipe = item.info.itemType and item.info.itemType == RECIPE;
-	local itemRarity = item.info.itemRarity;
+	--local isRecipe = item.info.itemType and item.info.itemType == RECIPE;
 
 	tooltip:SetOwner(UIParent, "ANCHOR_NONE");
 	tooltip:SetHyperlink(item.link);
@@ -109,7 +108,13 @@ local function ScanItemTooltip(item)
 					table.insert(errormsgs, classes);
 				end
 
-				if ( text and not level and not reputation and not skill and not requires and not classes ) then
+				local is2HWeapon = text:match(INVTYPE_2HWEAPON);
+
+				if ( not level and not reputation and not skill and not requires and not classes and is2HWeapon ) then
+					item.cantEquip = true;
+				end
+
+				if ( text and not level and not reputation and not skill and not requires and not classes and not is2HWeapon ) then
 					table.insert(errormsgs, text);
 				end
 
@@ -118,22 +123,20 @@ local function ScanItemTooltip(item)
 				end
 			end
 
-			if ( itemRarity and itemRarity > LE_ITEM_QUALITY_COMMON
-				and ( text == TRANSMOGRIFY_TOOLTIP_APPEARANCE_UNKNOWN or text == TRANSMOGRIFY_STYLE_UNCOLLECTED ))
-			then
+			if ( text == TRANSMOGRIFY_TOOLTIP_APPEARANCE_UNKNOWNor text == TRANSMOGRIFY_STYLE_UNCOLLECTED ) then
 				item.transmogUncollected = true;
 			end
 		end
 
-		--[[
 		frame = _G["NuuhMerchantTooltipTextRight" .. i];
 		r, g, b = frame:GetTextColor();
 		text = frame:GetText();
 
 		if ( text and r >= 0.9 and g <= 0.2 and b <= 0.2 ) then
-			table.insert(errormsgs, text);
+			-- is there anything else that can be on the right in red color?
+			--table.insert(errormsgs, text);
+			item.cantEquip = true;
 		end
-		]]--
 	end
 
 	item.errormsgs = errormsgs;
@@ -391,12 +394,17 @@ local function ProcessItem(item)
 		local isCloak = (equipSlot == "INVTYPE_CLOAK");
 		local isBag = (equipSlot == "INVTYPE_BAG");
 
-		if not (isArmor and (isGeneric or isCloak or isBag)) then
+		if ( not (isArmor and (isGeneric or isCloak or isBag)) ) then
 			local name = GetItemSubClassInfo(itemClassId, itemSubClassId);
-			table.insert(item.subtext, name);
+
+			if ( item.cantEquip ) then
+				table.insert(item.subtext, "|cffd00000" .. name .. "|r");
+			else
+				table.insert(item.subtext, name);
+			end
 		end
 	else
-		if not item.hasErrors or not isMentionedInErrors(item.errormsgs, itemSubType) then
+		if ( not item.hasErrors or not isMentionedInErrors(item.errormsgs, itemSubType) ) then
 			table.insert(item.subtext, itemSubType);
 		end
 	end
@@ -515,6 +523,7 @@ local function UpdateMerchantItems()
 			transmogIsIllusion = false,
 			transmogIsIllusionKnown = false,
 			heirloomUncollected = false,
+			cantEquip = false,
 			hasErrors = false,
 			isKnown = false,
 			link = link,
@@ -536,13 +545,13 @@ local function UpdateMerchantItems()
 			item.itemID = tonumber(link:match("item:(%d+)") or 0);
 			item.currencyID = tonumber(link:match("currency:(%d+)") or 0);
 
+			item = ScanItemTooltip(item);
+
 			if ( item.currencyID > 0 ) then
 				item = ProcessCurrency(item);
 			else
 				item = ProcessItem(item);
 			end
-
-			item = ScanItemTooltip(item);
 
 			if ( item.transmogIsIllusionKnown ) then
 				table.insert(item.errormsgs, ITEM_SPELL_KNOWN);
