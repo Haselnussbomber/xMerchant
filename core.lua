@@ -485,7 +485,9 @@ end
 
 local function UpdateSearch()
 	for i=1, numMerchantItems, 1 do
-		items[i] = ProcessSearch(items[i]);
+		if ( items[i] ) then
+			items[i] = ProcessSearch(items[i]);
+		end
 	end
 
 	SortItems();
@@ -546,6 +548,14 @@ local function UpdateMerchantItems()
 
 		table.insert(items, item);
 	end
+
+	-- retry if no data received
+	C_Timer.After(0.5, function()
+		if ( #items > 0 and items[1].link == nil and MerchantFrame:IsShown() ) then
+			UpdateMerchantItems();
+			MerchantUpdate();
+		end
+	end);
 
 	UpdateSearch();
 end
@@ -1014,9 +1024,11 @@ hooksecurefunc("MerchantFrame_Update", function()
 		CurrencyUpdate();
 		FactionsUpdate();
 		IllusionsUpdate();
-		UpdateMerchantItems();
-		MerchantUpdate();
-		frame:Show();
+		C_Timer.After(0.01, function()
+			UpdateMerchantItems();
+			MerchantUpdate();
+			frame:Show();
+		end);
 	end
 
 	npcName = UnitName("NPC");
