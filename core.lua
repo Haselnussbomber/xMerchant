@@ -123,7 +123,7 @@ local function ScanItemTooltip(item)
 				end
 			end
 
-			if ( text == TRANSMOGRIFY_TOOLTIP_APPEARANCE_UNKNOWNor text == TRANSMOGRIFY_STYLE_UNCOLLECTED ) then
+			if ( text == TRANSMOGRIFY_TOOLTIP_APPEARANCE_UNKNOWN or text == TRANSMOGRIFY_STYLE_UNCOLLECTED ) then
 				item.transmogUncollected = true;
 			end
 		end
