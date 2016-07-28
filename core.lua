@@ -791,7 +791,7 @@ local function OnEvent(self, event, ...)
 		return;
 	end
 
-	if ( event == "BAG_UPDATE_DELAYED" ) then
+	if ( event == "BAG_UPDATE_DELAYED" and MerchantFrame:IsShown() ) then
 		CurrencyUpdate();
 		FactionsUpdate();
 		IllusionsUpdate();
