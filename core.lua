@@ -568,7 +568,19 @@ local function UpdateMerchantItems()
 
 	-- retry if no data received
 	C_Timer.After(0.5, function()
-		if ( #items > 0 and items[1].link == nil and MerchantFrame:IsShown() ) then
+		if ( not MerchantFrame:IsShown() ) then
+			return;
+		end
+
+		local shouldRetry = false;
+
+		for i=1, #items, 1 do
+			if ( not items[i] or not items[i].link ) then
+				shouldRetry = true;
+			end
+		end
+
+		if ( shouldRetry ) then
 			UpdateMerchantItems();
 			MerchantUpdate();
 		end
