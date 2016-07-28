@@ -448,7 +448,6 @@ local function ProcessSearch(item)
 				for i=1, tooltip:NumLines() do
 					if ( _G["NuuhMerchantTooltipTextLeft" .. i]:GetText():lower():match(searchText) ) then
 						item.isSearchedItem = true;
-						break;
 					end
 				end
 			end
@@ -567,12 +566,10 @@ local function setButtonHighlight(button, a, r, g, b)
 end
 
 local function MerchantUpdate()
-	local self = NuuhMerchantFrame;
-
-	FauxScrollFrame_Update(self.scrollframe, numMerchantItems, NUM_BUTTONS, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, nil, nil, nil, nil, nil, nil, 1);
+	FauxScrollFrame_Update(NuuhMerchantFrame.scrollframe, numMerchantItems, NUM_BUTTONS, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, nil, nil, nil, nil, nil, nil, 1);
 
 	for i=1, NUM_BUTTONS, 1 do
-		local offset = i + FauxScrollFrame_GetOffset(self.scrollframe);
+		local offset = i + FauxScrollFrame_GetOffset(NuuhMerchantFrame.scrollframe);
 		local item = items[offset];
 		local button = buttons[i];
 		button.hover = nil;
