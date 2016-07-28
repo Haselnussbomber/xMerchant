@@ -377,7 +377,7 @@ local function ProcessItem(item)
 	-- item level
 	if isEquippable
 		and iLevel
-		and not (itemRarity == 7 and iLevel == 1) -- don't show if heirloom and ilvl == 1
+		and not (itemRarity == LE_ITEM_QUALITY_HEIRLOOM and iLevel == 1)
 		and equipSlot ~= "INVTYPE_TABARD"
 		and equipSlot ~= "INVTYPE_BAG"
 		and equipSlot ~= "INVTYPE_BODY"
@@ -415,6 +415,14 @@ local function ProcessItem(item)
 	if ( item.itemID and ILLUSIONS_LIST[item.itemID] ) then
 		item.transmogIsIllusion = true;
 		item.transmogIsIllusionKnown = ( illusions[ILLUSIONS_LIST[item.itemID]] == false );
+	end
+
+	-- heirlooms
+	if item.itemID
+		and item.info.itemRarity == LE_ITEM_QUALITY_HEIRLOOM
+		and not C_Heirloom.PlayerHasHeirloom(item.itemID)
+	then
+		item.heirloomUncollected = true;
 	end
 
 	return item;
@@ -506,6 +514,7 @@ local function UpdateMerchantItems()
 			transmogUncollected = false,
 			transmogIsIllusion = false,
 			transmogIsIllusionKnown = false,
+			heirloomUncollected = false,
 			hasErrors = false,
 			isKnown = false,
 			link = link,
@@ -620,6 +629,11 @@ local function MerchantUpdate()
 				if ( item.transmogUncollected or ( item.transmogIsIllusion and item.transmogIsIllusionKnown ) ) then
 					setButtonBackgroundColor(button, 0.8, 0.4, 0.8); -- purple
 					setButtonHoverColor(button, 0.9, 0.5, 0.9); -- lighter purple
+				end
+
+				if ( item.heirloomUncollected ) then
+					setButtonBackgroundColor(button, 0, 0.4, 0.5); -- darker heirloom quality color
+					setButtonHoverColor(button, qr, qg, qb); -- item quality color (heirloom)
 				end
 			end
 
