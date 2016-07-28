@@ -701,9 +701,10 @@ local function MerchantUpdate()
 			button.name = item.info.name;
 			button.link = item.link;
 			button.texture = item.info.texture;
-			button.hasItem = true;
+			button.price = item.info.price;
 
 			-- used to buy item
+			button.hasItem = true;
 			button:SetID(item.index);
 
 			button:SetAlpha(isSearching and (item.isSearchedItem and 1 or 0.3) or 1);
