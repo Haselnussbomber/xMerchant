@@ -508,87 +508,6 @@ local function UpdateSearch()
 	SortItems();
 end
 
-local function UpdateMerchantItems()
-	numMerchantItems = GetMerchantNumItems();
-	wipe(items);
-
-	for i=1, numMerchantItems, 1 do
-		local name, texture, price, quantity, numAvailable, isUsable, extendedCost = GetMerchantItemInfo(i);
-		local link = GetMerchantItemLink(i);
-
-		local item = {
-			index = i,
-			isSearchedItem = false,
-			transmogUncollected = false,
-			transmogIsIllusion = false,
-			transmogIsIllusionKnown = false,
-			heirloomUncollected = false,
-			cantEquip = false,
-			hasErrors = false,
-			isKnown = false,
-			link = link,
-			itemID = 0,
-			currencyID = 0,
-			subtext = {},
-			info = {
-				name = name,
-				texture = texture,
-				price = price,
-				quantity = quantity,
-				numAvailable = numAvailable,
-				isUsable = isUsable,
-				extendedCost = extendedCost
-			}
-		};
-
-		if ( link ) then
-			item.itemID = tonumber(link:match("item:(%d+)") or 0);
-			item.currencyID = tonumber(link:match("currency:(%d+)") or 0);
-
-			item = ScanItemTooltip(item);
-
-			if ( item.currencyID > 0 ) then
-				item = ProcessCurrency(item);
-			else
-				item = ProcessItem(item);
-			end
-
-			if ( item.transmogIsIllusionKnown ) then
-				table.insert(item.errormsgs, ITEM_SPELL_KNOWN);
-				item.hasErrors = true;
-			end
-
-			if ( item.hasErrors ) then
-				table.insert(item.subtext, "|cffd00000" .. table.concat(item.errormsgs, " - ") .. "|r");
-			end
-		end
-
-		table.insert(items, item);
-	end
-
-	-- retry if no data received
-	C_Timer.After(0.5, function()
-		if ( not MerchantFrame:IsShown() ) then
-			return;
-		end
-
-		local shouldRetry = false;
-
-		for i=1, #items, 1 do
-			if ( not items[i] or not items[i].link ) then
-				shouldRetry = true;
-			end
-		end
-
-		if ( shouldRetry ) then
-			UpdateMerchantItems();
-			MerchantUpdate();
-		end
-	end);
-
-	UpdateSearch();
-end
-
 local function resetButtonBackgroundColor(button)
 	button.highlight:SetVertexColor(0.5, 0.5, 0.5);
 	button.highlight:Hide();
@@ -718,6 +637,87 @@ local function MerchantUpdate()
 			StackSplitFrame:Hide();
 		end
 	end
+end
+
+local function UpdateMerchantItems()
+	numMerchantItems = GetMerchantNumItems();
+	wipe(items);
+
+	for i=1, numMerchantItems, 1 do
+		local name, texture, price, quantity, numAvailable, isUsable, extendedCost = GetMerchantItemInfo(i);
+		local link = GetMerchantItemLink(i);
+
+		local item = {
+			index = i,
+			isSearchedItem = false,
+			transmogUncollected = false,
+			transmogIsIllusion = false,
+			transmogIsIllusionKnown = false,
+			heirloomUncollected = false,
+			cantEquip = false,
+			hasErrors = false,
+			isKnown = false,
+			link = link,
+			itemID = 0,
+			currencyID = 0,
+			subtext = {},
+			info = {
+				name = name,
+				texture = texture,
+				price = price,
+				quantity = quantity,
+				numAvailable = numAvailable,
+				isUsable = isUsable,
+				extendedCost = extendedCost
+			}
+		};
+
+		if ( link ) then
+			item.itemID = tonumber(link:match("item:(%d+)") or 0);
+			item.currencyID = tonumber(link:match("currency:(%d+)") or 0);
+
+			item = ScanItemTooltip(item);
+
+			if ( item.currencyID > 0 ) then
+				item = ProcessCurrency(item);
+			else
+				item = ProcessItem(item);
+			end
+
+			if ( item.transmogIsIllusionKnown ) then
+				table.insert(item.errormsgs, ITEM_SPELL_KNOWN);
+				item.hasErrors = true;
+			end
+
+			if ( item.hasErrors ) then
+				table.insert(item.subtext, "|cffd00000" .. table.concat(item.errormsgs, " - ") .. "|r");
+			end
+		end
+
+		table.insert(items, item);
+	end
+
+	-- retry if no data received
+	C_Timer.After(0.5, function()
+		if ( not MerchantFrame:IsShown() ) then
+			return;
+		end
+
+		local shouldRetry = false;
+
+		for i=1, #items, 1 do
+			if ( not items[i] or not items[i].link ) then
+				shouldRetry = true;
+			end
+		end
+
+		if ( shouldRetry ) then
+			UpdateMerchantItems();
+			MerchantUpdate();
+		end
+	end);
+
+	UpdateSearch();
 end
 
 local function OnVerticalScroll(self, offset)
