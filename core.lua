@@ -1060,29 +1060,30 @@ hooksecurefunc("MerchantFrame_SetFilter", function()
 end);
 
 hooksecurefunc("MerchantFrame_Update", function()
-	if ( MerchantNameText:GetText() ~= npcName ) then
-		if npcName ~= "" then
-			-- frame was open, but npc changed
-			PlaySound("igCharacterInfoOpen");
-		end
-
-		FauxScrollFrame_OnVerticalScroll(NuuhMerchantFrame.scrollframe, 0, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, function() end);
-		CurrencyUpdate();
-		FactionsUpdate();
-		IllusionsUpdate();
-		C_Timer.After(0.01, function()
-			UpdateMerchantItems();
-			MerchantUpdate();
-			frame:Show();
-		end);
-	end
-
-	npcName = UnitName("NPC");
-
 	if ( MerchantFrame.selectedTab == 1 ) then
 		for i=1, 12, 1 do
 			_G["MerchantItem" .. i]:Hide();
 		end
+
+		if ( MerchantNameText:GetText() ~= npcName ) then
+			if npcName ~= "" then
+				-- frame was open, but npc changed
+				PlaySound("igCharacterInfoOpen");
+			end
+
+			FauxScrollFrame_OnVerticalScroll(NuuhMerchantFrame.scrollframe, 0, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, function() end);
+			CurrencyUpdate();
+			FactionsUpdate();
+			IllusionsUpdate();
+			C_Timer.After(0.01, function()
+				UpdateMerchantItems();
+				MerchantUpdate();
+			end);
+		end
+
+		frame:Show();
+
+		npcName = UnitName("NPC");
 	else
 		frame:Hide();
 
