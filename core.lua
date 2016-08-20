@@ -55,8 +55,6 @@ local function ScanItemTooltip(item)
 
 	item.tooltipScanned = true;
 
-	--local isRecipe = item.info.itemType and item.info.itemType == RECIPE;
-
 	tooltip:SetOwner(UIParent, "ANCHOR_NONE");
 	tooltip:SetHyperlink(item.link);
 
@@ -102,16 +100,18 @@ local function ScanItemTooltip(item)
 					table.insert(errormsgs, requires);
 				end
 
-				local classes = text:match(REQUIRES_CLASSES);
+				if ( not item.isRecipe ) then
+					local classes = text:match(REQUIRES_CLASSES);
 
-				if ( not level and not reputation and not skill and not requires and classes ) then
-					table.insert(errormsgs, classes);
-				end
+					if ( not level and not reputation and not skill and not requires and classes ) then
+						table.insert(errormsgs, classes);
+					end
 
-				local is2HWeapon = text:match(INVTYPE_2HWEAPON);
+					local is2HWeapon = text:match(INVTYPE_2HWEAPON);
 
-				if ( not level and not reputation and not skill and not requires and not classes and is2HWeapon ) then
-					item.cantEquip = true;
+					if ( not level and not reputation and not skill and not requires and not classes and is2HWeapon ) then
+						item.cantEquip = true;
+					end
 				end
 
 				if ( text and not level and not reputation and not skill and not requires and not classes and not is2HWeapon ) then
@@ -123,7 +123,7 @@ local function ScanItemTooltip(item)
 				end
 			end
 
-			if ( text == TRANSMOGRIFY_TOOLTIP_APPEARANCE_UNKNOWN or text == TRANSMOGRIFY_STYLE_UNCOLLECTED ) then
+			if ( not item.isRecipe and ( text == TRANSMOGRIFY_TOOLTIP_APPEARANCE_UNKNOWN or text == TRANSMOGRIFY_STYLE_UNCOLLECTED ) ) then
 				item.transmogUncollected = true;
 			end
 		end
@@ -360,7 +360,7 @@ local function ProcessCurrency(item)
 	return item;
 end
 
-local function ProcessItem(item)
+local function ProcessGetItemInfo(item)
 	local _, _, itemRarity, iLevel, _, itemType, itemSubType, _, equipSlot, _, _, itemClassId, itemSubClassId = GetItemInfo(item.link);
 
 	itemRarity = ( itemRarity or LE_ITEM_QUALITY_COMMON );
@@ -373,12 +373,31 @@ local function ProcessItem(item)
 	item.info.itemClassId = itemClassId;
 	item.info.itemSubClassId = itemSubClassId;
 
-	local isEquippable = IsEquippableItem(item.link);
-	local isWeapon = (itemClassId == LE_ITEM_CLASS_WEAPON);
-	local isArmor = (itemClassId == LE_ITEM_CLASS_ARMOR);
+	if ( itemType and itemType == L["RECIPE"] ) then
+		item.isRecipe = true;
+	end
+
+	item.isEquippable = IsEquippableItem(item.link);
+	item.isWeapon = (itemClassId == LE_ITEM_CLASS_WEAPON);
+	item.isArmor = (itemClassId == LE_ITEM_CLASS_ARMOR);
+
+	return item;
+end
+
+local function ProcessItem(item)
+	if ( not item.info ) then
+		return item;
+	end
+
+	local iLevel = item.info.iLevel;
+	local itemRarity = item.info.itemRarity;
+	local itemSubType = item.info.itemSubType;
+	local equipSlot = item.info.equipSlot;
+	local itemClassId = item.info.itemClassId;
+	local itemSubClassId = item.info.itemSubClassId;
 
 	-- item level
-	if isEquippable
+	if item.isEquippable
 		and iLevel
 		and not (itemRarity == LE_ITEM_QUALITY_HEIRLOOM and iLevel == 1)
 		and equipSlot ~= "INVTYPE_TABARD"
@@ -389,12 +408,12 @@ local function ProcessItem(item)
 	end
 
 	-- item type
-	if ( isWeapon or isArmor ) then
+	if ( item.isWeapon or item.isArmor ) then
 		local isGeneric = (itemSubClassId == LE_ITEM_ARMOR_GENERIC); -- neck, finger, trinket, holdable...
 		local isCloak = (equipSlot == "INVTYPE_CLOAK");
 		local isBag = (equipSlot == "INVTYPE_BAG");
 
-		if ( not (isArmor and (isGeneric or isCloak or isBag)) ) then
+		if ( not (item.isArmor and (isGeneric or isCloak or isBag)) ) then
 			local name = GetItemSubClassInfo(itemClassId, itemSubClassId);
 
 			if ( item.cantEquip ) then
@@ -410,11 +429,11 @@ local function ProcessItem(item)
 	end
 
 	-- equip slot
-	if isEquippable
+	if item.isEquippable
 		and equipSlot
 		and equipSlot ~=""
 		and _G[equipSlot] ~= itemSubType
-		and not (isWeapon or itemSubClassId == LE_ITEM_ARMOR_SHIELD)
+		and not (item.isWeapon or itemSubClassId == LE_ITEM_ARMOR_SHIELD)
 	then
 		table.insert(item.subtext, _G[equipSlot]);
 	end
@@ -426,8 +445,9 @@ local function ProcessItem(item)
 	end
 
 	-- heirlooms
-	if item.itemID
-		and item.info.itemRarity == LE_ITEM_QUALITY_HEIRLOOM
+	if not item.isRecipe
+		and item.itemID
+		and itemRarity == LE_ITEM_QUALITY_HEIRLOOM
 		and not C_Heirloom.PlayerHasHeirloom(item.itemID)
 	then
 		item.heirloomUncollected = true;
@@ -551,7 +571,7 @@ local function MerchantUpdate()
 				setButtonBackgroundColor(button, 1, 0.2, 0.2); -- red
 
 			-- recipe and not known
-			elseif ( item.info.itemType and item.info.itemType == RECIPE and not item.isKnown ) then
+			elseif ( item.info.itemType and item.isRecipe and not item.isKnown ) then
 				setButtonBackgroundColor(button, 0.2, 1, 0.2); -- green
 
 			-- errors and known
@@ -657,6 +677,10 @@ local function UpdateMerchantItems()
 			cantEquip = false,
 			hasErrors = false,
 			isKnown = false,
+			isRecipe = false,
+			isEquippable = false,
+			isWeapon = false,
+			isArmor = false,
 			link = link,
 			itemID = 0,
 			currencyID = 0,
@@ -675,6 +699,8 @@ local function UpdateMerchantItems()
 		if ( link ) then
 			item.itemID = tonumber(link:match("item:(%d+)") or 0);
 			item.currencyID = tonumber(link:match("currency:(%d+)") or 0);
+
+			item = ProcessGetItemInfo(item);
 
 			item = ScanItemTooltip(item);
 

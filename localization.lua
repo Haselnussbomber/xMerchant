@@ -11,6 +11,12 @@ local getlocale	= GetLocale();
 local locale = {
 	deDE = {
 		["Search in item tooltips"] = "Gegenstandstooltip durchsuchen",
+		["RECIPE"] = "Rezept",
+	},
+
+	enUS = {
+		["Search in item tooltips"] = "Search in item tooltips",
+		["RECIPE"] = "Recipe",
 	}
 };
 
