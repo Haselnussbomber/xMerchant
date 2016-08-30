@@ -252,33 +252,11 @@ local function UpdateAltCurrency(button, index)
 
 	if ( itemCount > 0 ) then
 		for i=1, MAX_ITEM_COST, 1 do
-			local texture, cost, link, currencyName = GetMerchantItemCostItem(index, i);
+			local texture, cost = GetMerchantItemCostItem(index, i);
 			local item = button.item[i];
-			item.index = index;
 
-			local itemID = tonumber((link or "item:0"):match("item:(%d+)"));
-			local currency = nil;
-
-			if ( itemID and itemID ~= 0 ) then
-				for _, c in ipairs(currencies) do
-					if ( c.id == itemID ) then
-						currency = c;
-						break;
-					end
-				end
-			end
-
-			if ( not currency and currencyName ) then
-				for _, c in ipairs(currencies) do
-					if ( c.name == currencyName ) then
-						currency = c;
-						break;
-					end
-				end
-			end
-
-			item.currency = currency;
-			item.link = link;
+			item.itemIndex = index;
+			item.costItemIndex = i;
 
 			if ( currency and cost and currency.count < cost or not currency ) then
 				item.count:SetTextColor(1, 0, 0);
@@ -807,21 +785,8 @@ local function Item_OnEnter(self)
 	end
 
 	GameTooltip:SetOwner(self, "ANCHOR_RIGHT");
-
-	if ( self.currency ) then
-		if ( self.currency.type == "currency" ) then
-			GameTooltip:SetCurrencyToken(self.currency.index);
-		elseif (self.currency.type == "equip" ) then
-			GameTooltip:SetInventoryItem("player", self.currency.index, nil, true);
-		elseif (self.currency.type == "bagitem" ) then
-			GameTooltip:SetHyperlink(self.currency.link);
-		end
-
-		GameTooltip:Show();
-	elseif ( self.link ) then
-		GameTooltip:SetHyperlink(self.link);
-		GameTooltip:Show();
-	end
+	GameTooltip:SetMerchantCostItem(self.itemIndex, self.costItemIndex);
+	GameTooltip:Show();
 
 	if ( IsModifiedClick("DRESSUP") ) then
 		ShowInspectCursor();
