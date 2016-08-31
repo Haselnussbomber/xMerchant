@@ -121,6 +121,10 @@ local function ScanItemTooltip(item)
 				if ( text == ITEM_SPELL_KNOWN ) then
 					item.isKnown = true;
 				end
+
+				if ( text == TOOLTIP_SUPERCEDING_SPELL_NOT_KNOWN ) then
+					item.previousRecipeMissing = true;
+				end
 			end
 
 			if ( not item.isRecipe and ( text == TRANSMOGRIFY_TOOLTIP_APPEARANCE_UNKNOWN or text == TRANSMOGRIFY_STYLE_UNCOLLECTED ) ) then
@@ -548,12 +552,12 @@ local function MerchantUpdate()
 			elseif ( not item.info.isUsable ) then
 				setButtonBackgroundColor(button, 1, 0.2, 0.2); -- red
 
-			-- recipe and not known
-			elseif ( item.info.itemType and item.isRecipe and not item.isKnown ) then
+			-- unknown recipe and (if exists) previous recipe known, too
+			elseif ( item.isRecipe and not item.isKnown and not item.previousRecipeMissing ) then
 				setButtonBackgroundColor(button, 0.2, 1, 0.2); -- green
 
-			-- errors and known
-			elseif item.hasErrors and item.isKnown then
+			-- errors and not known
+			elseif item.hasErrors and not item.isKnown then
 				setButtonBackgroundColor(button, 1, 0.2, 0.2); -- red
 			end
 
@@ -655,6 +659,7 @@ local function UpdateMerchantItems()
 			cantEquip = false,
 			hasErrors = false,
 			isKnown = false,
+			previousRecipeMissing = false,
 			isRecipe = false,
 			isEquippable = false,
 			isWeapon = false,
