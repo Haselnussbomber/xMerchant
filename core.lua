@@ -24,10 +24,10 @@ local searchInTooltip = false;
 -- "Requires Level %d" to "Requires Level (%d+)"
 local REQUIRES_LEVEL = ITEM_MIN_LEVEL:gsub("%%d", "(%%d+)");
 
--- "Requires %s - %s" to "Requires (%s+) - (%s+)"
-local REQUIRES_REPUTATION = ITEM_REQ_REPUTATION:gsub("%%s", "(%%a+)");
+-- "Requires %s - %s" to "Requires ([^-]+) %%- ([^-]+)"
+local REQUIRES_REPUTATION = ITEM_REQ_REPUTATION:gsub("%-", "%%-"):gsub("%%s", "([^-]+)");
 
--- "Requires %s (%d)" to "Requires (%s+) %((%d+)%)"
+-- "Requires %s (%d)" to "Requires (%a+) %((%d+)%)"
 local REQUIRES_SKILL = ITEM_MIN_SKILL:gsub("%%1?$?s", "(%%a+)"):gsub("%(%%2?$?d%)", "%%((%%d+)%%)");
 
 -- "Classes: %s" to "Classes: (.*)"
