@@ -197,26 +197,31 @@ local function CurrencyUpdate()
 		local numSlots = GetContainerNumSlots(bagID);
 
 		for slotID=1, numSlots, 1 do
-			local itemID = GetContainerItemID(bagID, slotID);
+			local count, _, _, _, _, link = select(2, GetContainerItemInfo(bagID, slotID));
 
-			if ( itemID and itemID ~= 0 ) then
-				local count, _, _, _, _, link = select(2, GetContainerItemInfo(bagID, slotID));
-				local existed = false;
+			-- if there is no link, then there is no item in this slot
+			if ( link ) then
+				local itemID = tonumber((link or ""):match("item:(%d+)") or 0);
+				local name = link:match("|h[[]([^]]+)[]]|h") or "";
 
-				for _, currency in ipairs(currencies) do
-					if ( currency.id == tonumber(itemID) ) then
-						currency.count = currency.count + count;
-						existed = true;
+				if ( itemID and itemID ~= 0 ) then
+					local existed = false;
+
+					for _, currency in ipairs(currencies) do
+						if ( currency.id == tonumber(itemID) or currency.name == name ) then
+							currency.count = currency.count + count;
+							existed = true;
+						end
 					end
-				end
 
-				if ( not existed ) then
-					table.insert(currencies, {
-						type = "bagitem",
-						id = tonumber(itemID),
-						link = link,
-						count = count
-					});
+					if ( not existed ) then
+						table.insert(currencies, {
+							type = "bagitem",
+							id = tonumber(itemID),
+							link = link,
+							count = count
+						});
+					end
 				end
 			end
 		end
