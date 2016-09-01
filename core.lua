@@ -69,13 +69,14 @@ local function ScanItemTooltip(item)
 		if ( text and text ~= RETRIEVING_ITEM_INFO ) then
 			if ( r >= 0.9 and g <= 0.2 and b <= 0.2 ) then
 				local level = text:match(REQUIRES_LEVEL);
+				local reputation, factionName, classes, is2HWeapon;
 
 				if ( level ) then
 					table.insert(errormsgs, LEVEL_GAINED:format(level));
 				end
 
 				if ( not level ) then
-					local reputation, factionName = text:match(REQUIRES_REPUTATION);
+					reputation, factionName = text:match(REQUIRES_REPUTATION);
 
 					if ( reputation and factionName ) then
 						local standingLabel = factions[factionName];
@@ -101,13 +102,13 @@ local function ScanItemTooltip(item)
 				end
 
 				if ( not item.isRecipe ) then
-					local classes = text:match(REQUIRES_CLASSES);
+					classes = text:match(REQUIRES_CLASSES);
 
 					if ( not level and not reputation and not skill and not requires and classes ) then
 						table.insert(errormsgs, classes);
 					end
 
-					local is2HWeapon = text:match(INVTYPE_2HWEAPON);
+					is2HWeapon = text:match(INVTYPE_2HWEAPON);
 
 					if ( not level and not reputation and not skill and not requires and not classes and is2HWeapon ) then
 						item.cantEquip = true;
