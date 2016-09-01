@@ -113,6 +113,7 @@ local function ScanItemTooltip(item)
 				end
 
 				if ( text == ITEM_SPELL_KNOWN ) then
+					errormsgs = { text }; -- only show that it's known
 					item.isKnown = true;
 				end
 
