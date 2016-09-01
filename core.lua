@@ -11,7 +11,6 @@ local L = xm.L;
 
 local buttons = {};
 local knowns = {};
-local factions = {};
 local illusions = {};
 local currencies = {};
 local npcName = "";
@@ -76,16 +75,10 @@ local function ScanItemTooltip(item)
 				end
 
 				if ( not level ) then
-					reputation, factionName = text:match(REQUIRES_REPUTATION);
+					factionName, reputation = text:match(REQUIRES_REPUTATION);
 
 					if ( reputation and factionName ) then
-						local standingLabel = factions[factionName];
-
-						if ( standingLabel ) then
-							table.insert(errormsgs, reputation .. " (" .. standingLabel .. ") - " .. factionName);
-						else
-							table.insert(errormsgs, reputation .. " - " .. factionName);
-						end
+						table.insert(errormsgs, reputation);
 					end
 				end
 
@@ -148,27 +141,6 @@ local function ScanItemTooltip(item)
 	item.hasErrors = #errormsgs > 0;
 
 	return item;
-end
-
-local function FactionsUpdate()
-	wipe(factions);
-
-	for factionIndex = 1, GetNumFactions() do
-		local name, _, standingId, _, _, _, _, _, isHeader, _, _, _, _, factionID = GetFactionInfo(factionIndex);
-		local friendID, _, _, _, _, _, friendTextLevel = GetFriendshipReputation(factionID);
-
-		if isHeader == nil then
-			local standingLabel;
-
-			if friendID ~= nil then
-				standingLabel = friendTextLevel or UNKNOWN;
-			else
-				standingLabel = _G["FACTION_STANDING_LABEL" .. tostring(standingId)] or UNKNOWN;
-			end
-
-			factions[name] = standingLabel;
-	 	end
-	end
 end
 
 local function IllusionsUpdate()
@@ -837,7 +809,6 @@ local function OnEvent(self, event, ...)
 
 	if ( event == "BAG_UPDATE_DELAYED" and MerchantFrame:IsShown() ) then
 		CurrencyUpdate();
-		FactionsUpdate();
 		IllusionsUpdate();
 		UpdateMerchantItems();
 		MerchantUpdate();
@@ -1070,7 +1041,6 @@ hooksecurefunc("MerchantFrame_Update", function()
 
 			FauxScrollFrame_OnVerticalScroll(NuuhMerchantFrame.scrollframe, 0, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, function() end);
 			CurrencyUpdate();
-			FactionsUpdate();
 			IllusionsUpdate();
 			C_Timer.After(0.01, function()
 				UpdateMerchantItems();
@@ -1095,7 +1065,6 @@ hooksecurefunc("MerchantFrame_Update", function()
 end);
 
 MerchantFrame:HookScript("OnHide", function()
-	wipe(factions);
 	wipe(currencies);
 	wipe(illusions);
 	wipe(items);
