@@ -550,12 +550,9 @@ local function MerchantUpdate()
 				setButtonBackgroundColor(button, 1, 0.2, 0.2); -- red
 			end
 
-			if ( item.currencyID == 0 ) then
-				if ( item.hasErrors ) then
-					setButtonHoverColor(button, 1, 0.2, 0.2); -- red
-				else
-					setButtonHoverColor(button, qr, qg, qb); -- item quality color
-				end
+			-- not a currency
+			if ( item.currencyID == 0 and not item.hasErrors ) then
+				setButtonHoverColor(button, qr, qg, qb); -- item quality color
 
 				if ( item.transmogUncollected or ( item.transmogIsIllusion and item.transmogIsIllusionKnown ) ) then
 					setButtonBackgroundColor(button, 0.8, 0.4, 0.8); -- purple
