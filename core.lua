@@ -55,7 +55,7 @@ local function ScanItemTooltip(item)
 	item.tooltipScanned = true;
 
 	tooltip:SetOwner(UIParent, "ANCHOR_NONE");
-	tooltip:SetHyperlink(item.link);
+	tooltip:SetMerchantItem(item.index);
 
 	local errormsgs = {};
 	local numLines = tooltip:NumLines();
