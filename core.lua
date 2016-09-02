@@ -235,11 +235,21 @@ local function UpdateAltCurrency(button, index)
 
 	if ( itemCount > 0 ) then
 		for i=1, MAX_ITEM_COST, 1 do
-			local texture, cost = GetMerchantItemCostItem(index, i);
+			local texture, cost, link, name = GetMerchantItemCostItem(index, i);
+			local itemID = tonumber((link or ""):match("item:(%d+)") or 0);
 			local item = button.item[i];
 
 			item.itemIndex = index;
 			item.costItemIndex = i;
+
+			local currency = nil;
+
+			for _, c in ipairs(currencies) do
+				if ( c.id == tonumber(itemID) or c.name == name ) then
+					currency = c;
+					break;
+				end
+			end
 
 			if ( currency and cost and currency.count < cost or not currency ) then
 				item.count:SetTextColor(1, 0, 0);
