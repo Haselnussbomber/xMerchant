@@ -108,7 +108,7 @@ local function ScanItemTooltip(item)
 					end
 				end
 
-				if ( text and not level and not reputation and not skill and not requires and not classes and not is2HWeapon ) then
+				if ( text and text ~= TOOLTIP_SUPERCEDING_SPELL_NOT_KNOWN and not level and not reputation and not skill and not requires and not classes and not is2HWeapon ) then
 					table.insert(errormsgs, text);
 				end
 
@@ -136,6 +136,10 @@ local function ScanItemTooltip(item)
 			--table.insert(errormsgs, text);
 			item.cantEquip = true;
 		end
+	end
+
+	if ( item.previousRecipeMissing ) then
+		table.insert(errormsgs, TOOLTIP_SUPERCEDING_SPELL_NOT_KNOWN);
 	end
 
 	item.errormsgs = errormsgs;
