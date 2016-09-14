@@ -372,13 +372,13 @@ local function ProcessItem(item)
 	local itemSubClassId = item.info.itemSubClassId;
 
 	-- item level
-	if item.isEquippable
+	if ( item.isEquippable
 		and iLevel
-		and not (itemRarity == LE_ITEM_QUALITY_HEIRLOOM and iLevel == 1)
+		and not ( itemRarity == LE_ITEM_QUALITY_HEIRLOOM and iLevel == 1 )
 		and equipSlot ~= "INVTYPE_TABARD"
 		and equipSlot ~= "INVTYPE_BAG"
 		and equipSlot ~= "INVTYPE_BODY"
-	then
+	) then
 		table.insert(item.subtext, tostring(iLevel));
 	end
 
@@ -388,7 +388,7 @@ local function ProcessItem(item)
 		local isCloak = (equipSlot == "INVTYPE_CLOAK");
 		local isBag = (equipSlot == "INVTYPE_BAG");
 
-		if ( not (item.isArmor and (isGeneric or isCloak or isBag)) ) then
+		if ( not ( item.isArmor and ( isGeneric or isCloak or isBag ) ) ) then
 			local name = GetItemSubClassInfo(itemClassId, itemSubClassId);
 
 			if ( item.cantEquip ) then
@@ -404,12 +404,12 @@ local function ProcessItem(item)
 	end
 
 	-- equip slot
-	if item.isEquippable
+	if ( item.isEquippable
 		and equipSlot
-		and equipSlot ~=""
+		and equipSlot ~= ""
 		and _G[equipSlot] ~= itemSubType
-		and not (item.isWeapon or itemSubClassId == LE_ITEM_ARMOR_SHIELD)
-	then
+		and not ( item.isWeapon or itemSubClassId == LE_ITEM_ARMOR_SHIELD )
+	) then
 		table.insert(item.subtext, _G[equipSlot]);
 	end
 
@@ -420,11 +420,11 @@ local function ProcessItem(item)
 	end
 
 	-- heirlooms
-	if not item.isRecipe
+	if ( not item.isRecipe
 		and item.itemID
 		and itemRarity == LE_ITEM_QUALITY_HEIRLOOM
 		and not C_Heirloom.PlayerHasHeirloom(item.itemID)
-	then
+	) then
 		item.heirloomUncollected = true;
 	end
 
@@ -444,8 +444,7 @@ local function ProcessSearch(item)
 				item.isSearchedItem = true;
 			end
 		else
-			if (
-				TextMatchesSearch(item.info.name)
+			if ( TextMatchesSearch(item.info.name)
 				or ( item.info.itemRarity and TextMatchesSearch(_G["ITEM_QUALITY" .. tostring(item.info.itemRarity) .. "_DESC"]) )
 				or ( TextMatchesSearch(item.info.itemType) )
 				or ( TextMatchesSearch(item.info.itemSubType) )
@@ -478,7 +477,7 @@ local function SortItems()
 		local others = {};
 
 		for _, item in ipairs(items) do
-			if (item.isSearchedItem) then
+			if ( item.isSearchedItem ) then
 				table.insert(found, item);
 			else
 				table.insert(others, item);
