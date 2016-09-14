@@ -454,7 +454,7 @@ local function ProcessSearch(item)
 				item.isSearchedItem = true;
 			elseif ( searchInTooltip ) then
 				tooltip:SetOwner(UIParent, "ANCHOR_NONE");
-				tooltip:SetHyperlink(item.link);
+				tooltip:SetMerchantItem(item.index);
 
 				for i=1, tooltip:NumLines() do
 					if ( _G["NuuhMerchantTooltipTextLeft" .. i]:GetText():lower():match(searchText) ) then
