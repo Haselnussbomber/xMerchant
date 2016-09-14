@@ -587,9 +587,12 @@ local function MerchantUpdate()
 			elseif ( item.info.extendedCost and item.info.price > 0 ) then
 				button.extendedCost = true;
 				button.money:SetText(GetMoneyString(item.info.price, true));
-			else
+			elseif ( item.info.price > 0 ) then
 				button.extendedCost = nil;
 				button.money:SetText(GetMoneyString(item.info.price, true));
+			else
+				button.extendedCost = nil;
+				button.money:SetText("");
 			end
 
 			if ( GetMoney() < item.info.price ) then
