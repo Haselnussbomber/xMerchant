@@ -197,7 +197,7 @@ local function CurrencyUpdate()
 				id = tonumber(itemID),
 				link = link,
 				name = name,
-				count = count
+				count = 0
 			});
 		end
 	end
@@ -217,7 +217,7 @@ local function CurrencyUpdate()
 					local existed = false;
 
 					for _, currency in ipairs(currencies) do
-						if ( currency.id == tonumber(itemID) or currency.name == name ) then
+						if ( currency.id == itemID or (currency.name and name and currency.name == name) ) then
 							currency.count = currency.count + count;
 							existed = true;
 						end
