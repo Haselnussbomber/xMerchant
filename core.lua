@@ -163,9 +163,9 @@ end
 local function CurrencyUpdate()
 	wipe(currencies);
 
-	local limit = GetCurrencyListSize();
+	local numCurrencies = GetCurrencyListSize();
 
-	for i=1, limit do
+	for i = 1, numCurrencies do
 		local name, isHeader, _, _, _, count, _, max = GetCurrencyListInfo(i);
 
 		if ( not isHeader and name and name ~= "" ) then
@@ -184,20 +184,25 @@ local function CurrencyUpdate()
 		end
 	end
 
-	for i=INVSLOT_FIRST_EQUIPPED, INVSLOT_LAST_EQUIPPED, 1 do
+	for i = INVSLOT_FIRST_EQUIPPED, INVSLOT_LAST_EQUIPPED do
 		local itemID = GetInventoryItemID("player", i);
 
 		if ( itemID ) then
+			local link = GetInventoryItemLink("player", i);
+			local name = GetItemInfo(link);
+
 			table.insert(currencies, {
 				type = "equip",
 				index = i,
 				id = tonumber(itemID),
-				count = 1
+				link = link,
+				name = name,
+				count = count
 			});
 		end
 	end
 
-	for bagID=0, NUM_BAG_SLOTS, 1 do
+	for bagID = 0, NUM_BAG_SLOTS do
 		local numSlots = GetContainerNumSlots(bagID);
 
 		for slotID=1, numSlots, 1 do
@@ -206,7 +211,7 @@ local function CurrencyUpdate()
 			-- if there is no link, then there is no item in this slot
 			if ( link ) then
 				local itemID = tonumber((link or ""):match("item:(%d+)") or 0);
-				local name = link:match("|h[[]([^]]+)[]]|h") or "";
+				local name = GetItemInfo(link);
 
 				if ( itemID and itemID ~= 0 ) then
 					local existed = false;
@@ -240,45 +245,50 @@ local function UpdateAltCurrency(button, index)
 	if ( itemCount > 0 ) then
 		for i=1, MAX_ITEM_COST, 1 do
 			local texture, cost, link, name = GetMerchantItemCostItem(index, i);
+
 			local itemID = tonumber((link or ""):match("item:(%d+)") or 0);
 			local item = button.item[i];
 
 			item.itemIndex = index;
 			item.costItemIndex = i;
 
-			local currency = nil;
+			if ( itemID ) then
+				local currency = nil;
 
-			for _, c in ipairs(currencies) do
-				if ( c.id == tonumber(itemID) or c.name == name ) then
-					currency = c;
-					break;
+				for _, c in ipairs(currencies) do
+					if ( c.id == itemID or (c.name and name and c.name == name) ) then
+						currency = c;
+						break;
+					end
 				end
-			end
 
-			if ( currency and cost and currency.count < cost or not currency ) then
-				item.count:SetTextColor(1, 0, 0);
+				if ( not currency or (currency and cost and currency.count < cost) ) then
+					item.count:SetTextColor(1, 0, 0);
+				else
+					item.count:SetTextColor(1, 1, 1);
+				end
+
+				item.count:SetText(cost);
+				item.icon:SetTexture(texture);
+
+				item.count:SetPoint("RIGHT", item.icon, "LEFT", -2, 0);
+				item.icon:SetTexCoord(0, 1, 0, 1);
+
+				local iconWidth = 17;
+				item.icon:SetWidth(iconWidth);
+				item.icon:SetHeight(iconWidth);
+				item:SetWidth(item.count:GetWidth() + iconWidth + 4);
+				item:SetHeight(item.count:GetHeight() + 4);
+
+				if ( not texture ) then
+					item:Hide();
+				else
+					lastFrame = item;
+					table.insert(currency_frames, item);
+					item:Show();
+				end
 			else
-				item.count:SetTextColor(1, 1, 1);
-			end
-
-			item.count:SetText(cost);
-			item.icon:SetTexture(texture);
-
-			item.count:SetPoint("RIGHT", item.icon, "LEFT", -2, 0);
-			item.icon:SetTexCoord(0, 1, 0, 1);
-
-			local iconWidth = 17;
-			item.icon:SetWidth(iconWidth);
-			item.icon:SetHeight(iconWidth);
-			item:SetWidth(item.count:GetWidth() + iconWidth + 4);
-			item:SetHeight(item.count:GetHeight() + 4);
-
-			if ( not texture ) then
 				item:Hide();
-			else
-				lastFrame = item;
-				table.insert(currency_frames, item);
-				item:Show();
 			end
 		end
 	else
