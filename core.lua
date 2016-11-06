@@ -35,6 +35,9 @@ local REQUIRES_CLASSES = ITEM_CLASSES_ALLOWED:gsub("%%s", "(.*)");
 -- "Requires %s" to "Requires (.*)"
 local REQUIRES = ITEM_REQ_SKILL:gsub("%%1?$?s", "(.*)");
 
+-- "Collected (%d/%d)" to "Collected %((%d+)/(%d+)%)"
+local PET_COLLECTED_COUNT = ITEM_PET_KNOWN:gsub("%(%%d/%%d%)", "%%((%%d+)/(%%d+)%%)");
+
 local tooltip = CreateFrame("GameTooltip", "NuuhMerchantTooltip", UIParent, "GameTooltipTemplate");
 
 local NUM_BUTTONS = 8;
@@ -66,6 +69,17 @@ local function ScanItemTooltip(item)
 		local text = frame:GetText();
 
 		if ( text and text ~= RETRIEVING_ITEM_INFO ) then
+
+			if ( item.info.itemClassId == 15 and item.info.itemSubClassId == 2 ) then
+				local pet_collected_count, pet_collected_max = text:match(PET_COLLECTED_COUNT);
+
+				if ( pet_collected_count ~= nil and pet_collected_max ~= nil ) then
+					item.petCollected = true;
+					item.petCollectedCount = tonumber(pet_collected_count);
+					item.petCollectedMax = tonumber(pet_collected_max);
+				end
+			end
+
 			if ( r >= 0.9 and g <= 0.2 and b <= 0.2 ) then
 				local level = text:match(REQUIRES_LEVEL);
 				local reputation, factionName, classes, is2HWeapon;
@@ -108,7 +122,7 @@ local function ScanItemTooltip(item)
 					end
 				end
 
-				if ( text and text ~= TOOLTIP_SUPERCEDING_SPELL_NOT_KNOWN and not level and not reputation and not skill and not requires and not classes and not is2HWeapon ) then
+				if ( text and text ~= TOOLTIP_SUPERCEDING_SPELL_NOT_KNOWN and not level and not reputation and not skill and not requires and not classes and not is2HWeapon and not item.petCollected ) then
 					table.insert(errormsgs, text);
 				end
 
@@ -409,7 +423,22 @@ local function ProcessItem(item)
 		end
 	else
 		if ( not item.hasErrors or not isMentionedInErrors(item.errormsgs, itemSubType) ) then
-			table.insert(item.subtext, itemSubType);
+			local text = itemSubType;
+
+			if ( item.petCollected and item.petCollectedCount > 0 ) then
+				local color = "";
+
+				if ( item.petCollectedCount == item.petCollectedMax ) then
+					color = RED_FONT_COLOR_CODE;
+					item.hasErrors = true;
+				end
+
+				local count = ((" (%d/%d)"):format(item.petCollectedCount, item.petCollectedMax));
+
+				text = color .. text .. count .. "|r";
+			end
+
+			table.insert(item.subtext, text);
 		end
 	end
 
@@ -669,6 +698,9 @@ local function UpdateMerchantItems()
 			link = link,
 			itemID = 0,
 			currencyID = 0,
+			petCollected = false,
+			petCollectedCount = 0,
+			petCollectedMax = 0,
 			subtext = {},
 			info = {
 				name = name,
@@ -700,7 +732,7 @@ local function UpdateMerchantItems()
 				item.hasErrors = true;
 			end
 
-			if ( item.hasErrors ) then
+			if ( item.hasErrors and #item.errormsgs > 0 ) then
 				table.insert(item.subtext, "|cffd00000" .. table.concat(item.errormsgs, " - ") .. "|r");
 			end
 		end
