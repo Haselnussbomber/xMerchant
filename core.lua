@@ -249,12 +249,46 @@ local function CurrencyUpdate_BagItems()
 	end
 end
 
+local function CurrencyUpdate_ReagentBankItems()
+	local numReagentBankSlots = 98;
+
+	for slotID=1, numReagentBankSlots, 1 do
+		local count, _, _, _, _, link = select(2, GetContainerItemInfo(REAGENTBANK_CONTAINER, slotID));
+
+		-- if there is no link, then there is no item in this slot
+		if ( link ) then
+			local itemID = tonumber((link or ""):match("item:(%d+)") or 0);
+
+			if ( itemID and itemID ~= 0 ) then
+				local existed = false;
+
+				for _, currency in ipairs(currencies) do
+					if ( currency.type == "reagentbankitem" and currency.id == itemID ) then
+						currency.count = currency.count + count;
+						existed = true;
+					end
+				end
+
+				if ( not existed ) then
+					table.insert(currencies, {
+						type = "reagentbankitem",
+						id = itemID,
+						link = link,
+						count = count
+					});
+				end
+			end
+		end
+	end
+end
+
 local function CurrencyUpdate()
 	wipe(currencies);
 
 	CurrencyUpdate_Currencies();
 	CurrencyUpdate_Equip();
 	CurrencyUpdate_BagItems();
+	CurrencyUpdate_ReagentBankItems();
 end
 
 local function UpdateAltCurrency(button, index)
