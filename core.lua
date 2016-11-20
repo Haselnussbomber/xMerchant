@@ -250,7 +250,7 @@ local function CurrencyUpdate_BagItems()
 end
 
 local function CurrencyUpdate_ReagentBankItems()
-	local numReagentBankSlots = 98;
+	local numReagentBankSlots = GetContainerNumSlots(REAGENTBANK_CONTAINER);
 
 	for slotID=1, numReagentBankSlots, 1 do
 		local count, _, _, _, _, link = select(2, GetContainerItemInfo(REAGENTBANK_CONTAINER, slotID));
