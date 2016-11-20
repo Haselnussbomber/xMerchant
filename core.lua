@@ -69,7 +69,6 @@ local function ScanItemTooltip(item)
 		local text = frame:GetText();
 
 		if ( text and text ~= RETRIEVING_ITEM_INFO ) then
-
 			if ( item.info.itemClassId == 15 and item.info.itemSubClassId == 2 ) then
 				local pet_collected_count, pet_collected_max = text:match(PET_COLLECTED_COUNT);
 
@@ -174,9 +173,7 @@ local function IllusionsUpdate()
 	end
 end
 
-local function CurrencyUpdate()
-	wipe(currencies);
-
+local function CurrencyUpdate_Currencies()
 	local numCurrencies = GetCurrencyListSize();
 
 	for i = 1, numCurrencies do
@@ -184,38 +181,40 @@ local function CurrencyUpdate()
 
 		if ( not isHeader and name and name ~= "" ) then
 			local link = GetCurrencyListLink(i);
-			local id = link:match("currency:(%d+)");
+			local id = tonumber(link:match("currency:(%d+)") or 0);
 
 			table.insert(currencies, {
 				type = "currency",
 				index = i,
-				id = tonumber(id),
+				id = id,
 				link = link,
-				name = name,
+				name = name, -- add name because sometimes we get no itemID for currencies
 				count = count,
 				max = max
 			});
 		end
 	end
+end
 
+local function CurrencyUpdate_Equip()
 	for i = INVSLOT_FIRST_EQUIPPED, INVSLOT_LAST_EQUIPPED do
-		local itemID = GetInventoryItemID("player", i);
+		local itemID = tonumber(GetInventoryItemID("player", i) or 0);
 
-		if ( itemID ) then
+		if ( itemID and itemID ~= 0 ) then
 			local link = GetInventoryItemLink("player", i);
-			local name = GetItemInfo(link);
 
 			table.insert(currencies, {
 				type = "equip",
 				index = i,
-				id = tonumber(itemID),
+				id = itemID,
 				link = link,
-				name = name,
 				count = 0
 			});
 		end
 	end
+end
 
+local function CurrencyUpdate_BagItems()
 	for bagID = 0, NUM_BAG_SLOTS do
 		local numSlots = GetContainerNumSlots(bagID);
 
@@ -225,13 +224,12 @@ local function CurrencyUpdate()
 			-- if there is no link, then there is no item in this slot
 			if ( link ) then
 				local itemID = tonumber((link or ""):match("item:(%d+)") or 0);
-				local name = GetItemInfo(link);
 
 				if ( itemID and itemID ~= 0 ) then
 					local existed = false;
 
 					for _, currency in ipairs(currencies) do
-						if ( currency.id == itemID or (currency.name and name and currency.name == name) ) then
+						if ( currency.type == "bagitem" and currency.id == itemID ) then
 							currency.count = currency.count + count;
 							existed = true;
 						end
@@ -240,7 +238,7 @@ local function CurrencyUpdate()
 					if ( not existed ) then
 						table.insert(currencies, {
 							type = "bagitem",
-							id = tonumber(itemID),
+							id = itemID,
 							link = link,
 							count = count
 						});
@@ -249,6 +247,14 @@ local function CurrencyUpdate()
 			end
 		end
 	end
+end
+
+local function CurrencyUpdate()
+	wipe(currencies);
+
+	CurrencyUpdate_Currencies();
+	CurrencyUpdate_Equip();
+	CurrencyUpdate_BagItems();
 end
 
 local function UpdateAltCurrency(button, index)
