@@ -696,6 +696,7 @@ local function MerchantUpdate()
 			button.price = item.info.price;
 
 			-- used to buy item
+			button.count = item.info.quantity;
 			button.hasItem = true;
 			button:SetID(item.index);
 
