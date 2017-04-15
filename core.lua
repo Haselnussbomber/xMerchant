@@ -1034,6 +1034,11 @@ bottom:SetPoint("BOTTOMRIGHT", 30, -8);
 bottom:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar");
 bottom:SetTexCoord(0.515625, 1, 0, 0.421875);
 
+local function SetFontSize(frame, size)
+	local font, _, flags = frame:GetFont();
+	frame:SetFont(font, size, flags);
+end
+
 for i=1, NUM_BUTTONS, 1 do
 	local button = CreateFrame("Button", "NuuhMerchantFrame" .. i, frame);
 	button:SetWidth(frame:GetWidth());
@@ -1074,14 +1079,14 @@ for i=1, NUM_BUTTONS, 1 do
 	button.itemname = itemname;
 	itemname:SetPoint("TOPLEFT", icon, "TOPRIGHT", 5, 2);
 	itemname:SetJustifyH("LEFT");
-	itemname:SetTextHeight(13);
+	SetFontSize(itemname, 13);
 	itemname:SetHeight(15);
 
 	local iteminfo = button:CreateFontString("ARTWORK", "$parentItemInfo", "GameFontDisableSmall");
 	button.iteminfo = iteminfo;
 	iteminfo:SetPoint("TOPLEFT", itemname, "BOTTOMLEFT", 0, 2);
 	iteminfo:SetJustifyH("LEFT");
-	iteminfo:SetTextHeight(12);
+	SetFontSize(iteminfo, 12);
 	iteminfo:SetHeight(16);
 
 	local money = button:CreateFontString("ARTWORK", "$parentMoney", "GameFontHighlight");
