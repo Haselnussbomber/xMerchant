@@ -792,6 +792,7 @@ local function UpdateMerchantItems()
 		for i=1, #items, 1 do
 			if ( not items[i] or not items[i].link ) then
 				shouldRetry = true;
+				break;
 			end
 		end
 
