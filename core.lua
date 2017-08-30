@@ -987,7 +987,12 @@ search:SetText(SEARCH);
 
 local function Search_OnClick(self)
 	searchInTooltip = self:GetChecked();
-	PlaySound("igMainMenuOptionCheckBox" .. (searchInTooltip and "On" or "Off"));
+
+	if ( searchInTooltip ) then
+		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON);
+	else
+		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF);
+	end
 
 	if ( isSearching ) then
 		UpdateSearch();
@@ -1144,7 +1149,7 @@ hooksecurefunc("MerchantFrame_Update", function()
 		if ( MerchantNameText:GetText() ~= npcName ) then
 			if npcName ~= "" then
 				-- frame was open, but npc changed
-				PlaySound("igCharacterInfoOpen");
+				PlaySound(SOUNDKIT.IG_CHARACTER_INFO_OPEN);
 			end
 
 			FauxScrollFrame_OnVerticalScroll(NuuhMerchantFrame.scrollframe, 0, NuuhMerchantScrollFrame:GetHeight() / NUM_BUTTONS, function() end);
