@@ -495,7 +495,7 @@ local function ProcessItem(item)
 	-- transmog: illusions
 	if ( item.itemID and ILLUSIONS_LIST[item.itemID] ) then
 		item.transmogIsIllusion = true;
-		item.transmogIsIllusionKnown = ( illusions[ILLUSIONS_LIST[item.itemID]] == false );
+		item.transmogIsIllusionKnown = ( illusions[ILLUSIONS_LIST[item.itemID]] == true );
 	end
 
 	-- heirlooms
