@@ -623,13 +623,13 @@ local function MerchantUpdate()
 			elseif ( not item.info.isUsable ) then
 				setButtonBackgroundColor(button, 1, 0.2, 0.2); -- red
 
-			-- unknown recipe and (if exists) previous recipe known, too
-			elseif ( item.isRecipe and not item.isKnown and not item.previousRecipeMissing ) then
-				setButtonBackgroundColor(button, 0.2, 1, 0.2); -- green
-
 			-- errors and not known
 			elseif item.hasErrors and not item.isKnown then
 				setButtonBackgroundColor(button, 1, 0.2, 0.2); -- red
+
+			-- unknown recipe and (if exists) previous recipe known, too
+			elseif ( item.isRecipe and not item.isKnown and not item.previousRecipeMissing ) then
+				setButtonBackgroundColor(button, 0.2, 1, 0.2); -- green
 			end
 
 			-- not a currency
