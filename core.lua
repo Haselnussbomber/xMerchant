@@ -10,7 +10,6 @@ local addonName, xm = ...;
 local L = xm.L;
 
 local buttons = {};
-local knowns = {};
 local illusions = {};
 local currencies = {};
 local npcName = "";
@@ -69,7 +68,9 @@ local function ScanItemTooltip(item)
 		local text = frame:GetText();
 
 		if ( text and text ~= RETRIEVING_ITEM_INFO ) then
-			if ( item.info.itemClassId == 15 and item.info.itemSubClassId == 2 ) then
+			if ( item.info.itemClassId == LE_ITEM_CLASS_MISCELLANEOUS
+				and item.info.itemSubClassId == LE_ITEM_MISCELLANEOUS_COMPANION_PET
+			) then
 				local pet_collected_count, pet_collected_max = text:match(PET_COLLECTED_COUNT);
 
 				if ( pet_collected_count ~= nil and pet_collected_max ~= nil ) then
@@ -79,6 +80,7 @@ local function ScanItemTooltip(item)
 				end
 			end
 
+			-- red text
 			if ( r >= 0.9 and g <= 0.2 and b <= 0.2 ) then
 				local level = text:match(REQUIRES_LEVEL);
 				local reputation, factionName, classes, is2HWeapon;
@@ -135,9 +137,13 @@ local function ScanItemTooltip(item)
 				end
 			end
 
-			if ( not item.isRecipe and ( text == TRANSMOGRIFY_TOOLTIP_APPEARANCE_UNKNOWN or text == TRANSMOGRIFY_STYLE_UNCOLLECTED ) ) then
-				item.transmogUncollected = true;
+			if ( not item.isRecipe and text == TOY ) then
+				item.isToy = true;
 			end
+
+			--if ( not item.isRecipe and ( text == TRANSMOGRIFY_TOOLTIP_APPEARANCE_UNKNOWN or text == TRANSMOGRIFY_STYLE_UNCOLLECTED ) ) then
+			--	item.transmogUncollected = true;
+			--end
 		end
 
 		frame = _G["NuuhMerchantTooltipTextRight" .. i];
@@ -430,6 +436,7 @@ local function ProcessItem(item)
 
 	local iLevel = item.info.iLevel;
 	local itemRarity = item.info.itemRarity;
+	local itemType = item.info.itemType;
 	local itemSubType = item.info.itemSubType;
 	local equipSlot = item.info.equipSlot;
 	local itemClassId = item.info.itemClassId;
@@ -505,6 +512,13 @@ local function ProcessItem(item)
 		and not C_Heirloom.PlayerHasHeirloom(item.itemID)
 	) then
 		item.heirloomUncollected = true;
+	end
+
+	if ( item.isToy
+		and item.itemID
+		and PlayerHasToy(item.itemID) == false
+	) then
+		item.toyUncollected = true;
 	end
 
 	return item;
@@ -632,7 +646,10 @@ local function MerchantUpdate()
 			if ( item.currencyID == 0 and not item.hasErrors ) then
 				setButtonHoverColor(button, qr, qg, qb); -- item quality color
 
-				if ( item.transmogUncollected or ( item.transmogIsIllusion and item.transmogIsIllusionKnown ) ) then
+				if ( item.transmogUncollected
+					or ( item.transmogIsIllusion and item.transmogIsIllusionKnown )
+					or item.toyUncollected
+				) then
 					setButtonBackgroundColor(button, 0.8, 0.4, 0.8); -- purple
 					setButtonHoverColor(button, 0.9, 0.5, 0.9); -- lighter purple
 				end
@@ -724,11 +741,13 @@ local function UpdateMerchantItems()
 			transmogIsIllusion = false,
 			transmogIsIllusionKnown = false,
 			heirloomUncollected = false,
+			toyUncollected = false,
 			cantEquip = false,
 			hasErrors = false,
 			isKnown = false,
 			previousRecipeMissing = false,
 			isRecipe = false,
+			isToy = false,
 			isEquippable = false,
 			isWeapon = false,
 			isArmor = false,
@@ -753,6 +772,14 @@ local function UpdateMerchantItems()
 		if ( link ) then
 			item.itemID = tonumber(link:match("item:(%d+)") or 0);
 			item.currencyID = tonumber(link:match("currency:(%d+)") or 0);
+
+			if ( CanIMogIt:IsTransmogable(link) ) then
+				item.transmogUncollected = (
+					CanIMogIt:PlayerKnowsTransmogFromItem(link) == false
+					and CanIMogIt:PlayerKnowsTransmog(link) == false
+					and CanIMogIt:CharacterCanLearnTransmog(link) == true
+				);
+			end
 
 			item = ProcessGetItemInfo(item);
 
