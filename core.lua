@@ -49,6 +49,61 @@ local ILLUSIONS_LIST = {
 	[138954] = 5364, -- [Illusion: Poisoned]
 };
 
+local PRESERVED_CONTAMINANT_LIST = {
+	[177955] = {318268,1,15}, -- Deadly Momentum I
+	[177965] = {318493,2,20}, -- Deadly Momentum II
+	[177966] = {318497,3,35}, -- Deadly Momentum III
+	[177967] = {318486,3,60}, -- Echoing Void III
+	[177968] = {318485,2,35}, -- Echoing Void II
+	[177969] = {318280,1,25}, -- Echoing Void I
+	[177970] = {315607,1,10}, -- Avoidant I
+	[177971] = {315608,2,15}, -- Avoidant II
+	[177972] = {315609,3,20}, -- Avoidant III
+	[177973] = {315544,1,10}, -- Expedient I
+	[177974] = {315545,2,15}, -- Expedient II
+	[177975] = {315546,3,20}, -- Expedient III
+	[177976] = {318239,0,15}, -- Glimpse of Clarity
+	[177977] = {318272,0,15}, -- Gushing Wound
+	[177978] = {318269,1,15}, -- Honed Mind I
+	[177979] = {318494,2,20}, -- Honed Mind II
+	[177980] = {318498,3,35}, -- Honed Mind III
+	[177981] = {318303,1,12}, -- Ineffable Truth I
+	[177982] = {318484,2,30}, -- Ineffable Truth II
+	[177983] = {318274,1,20}, -- Infinite Stars I
+	[177984] = {318487,2,35}, -- Infinite Stars II
+	[177985] = {318488,3,60}, -- Infinite Stars III
+	[177986] = {315529,1,10}, -- Masterful I
+	[177987] = {315530,2,15}, -- Masterful II
+	[177988] = {315531,3,20}, -- Masterful III
+	[177989] = {318266,1,15}, -- Racing Pulse I
+	[177990] = {318492,2,20}, -- Racing Pulse II
+	[177991] = {318496,3,35}, -- Racing Pulse III
+	[177992] = {315554,1,10}, -- Severe I
+	[177993] = {315557,2,15}, -- Severe II
+	[177994] = {315558,3,20}, -- Severe III
+	[177995] = {315590,1,17}, -- Siphoner I
+	[177996] = {315591,2,28}, -- Siphoner II
+	[177997] = {315592,3,45}, -- Siphoner III
+	[177998] = {315277,1,10}, -- Strikethrough I
+	[177999] = {315281,2,15}, -- Strikethrough II
+	[178000] = {315282,3,20}, -- Strikethrough III
+	[178001] = {318270,1,15}, -- Surging Vitality I
+	[178002] = {318495,2,20}, -- Surging Vitality II
+	[178003] = {318499,3,35}, -- Surging Vitality III
+	[178004] = {318276,1,25}, -- Twilight Devastation I
+	[178005] = {318477,2,50}, -- Twilight Devastation II
+	[178006] = {318478,3,75}, -- Twilight Devastation III
+	[178007] = {318481,1,10}, -- Twisted Appendage I
+	[178008] = {318482,2,35}, -- Twisted Appendage II
+	[178009] = {318483,3,66}, -- Twisted Appendage III
+	[178010] = {315549,1,10}, -- Versatile I
+	[178011] = {315552,2,15}, -- Versatile II
+	[178012] = {315553,3,20}, -- Versatile III
+	[178013] = {318286,1,15}, -- Void Ritual I
+	[178014] = {318479,2,35}, -- Void Ritual II
+    [178015] = {318480,3,66}, -- Void Ritual III
+};
+
 local function ScanItemTooltip(item)
 	if ( not item.link or item.tooltipScanned ) then
 		return item;
@@ -469,7 +524,7 @@ local function ProcessItem(item)
 			end
 		end
 	else
-		if ( not item.hasErrors or not isMentionedInErrors(item.errormsgs, itemSubType) ) then
+		if ( not item.hasErrors or not isMentionedInErrors(item.errormsgs, itemSubType) ) and not (itemSubClassId == 8) then
 			local text = itemSubType;
 
 			if ( item.petCollected and item.petCollectedCount > 0 ) then
@@ -772,6 +827,21 @@ local function UpdateMerchantItems()
 		if ( link ) then
 			item.itemID = tonumber(link:match("item:(%d+)") or 0);
 			item.currencyID = tonumber(link:match("currency:(%d+)") or 0);
+
+			if PRESERVED_CONTAMINANT_LIST[item.itemID] then
+				local spellID, rank, corruption = unpack(PRESERVED_CONTAMINANT_LIST[item.itemID])
+				local spellName, _, spellIcon = GetSpellInfo(spellID)
+				if spellName then
+					item.info.name = spellName
+					if rank and rank > 0 then
+						item.info.name = item.info.name .. " " .. string.rep("I", rank)
+					end
+
+					item.info.texture = spellIcon
+					
+					table.insert(item.subtext, CORRUPTION_COLOR:WrapTextInColorCode(ITEM_CORRUPTION_BONUS_STAT:format(corruption)))
+				end
+			end
 
 			if ( CanIMogIt:IsTransmogable(link) ) then
 				item.transmogUncollected = (
