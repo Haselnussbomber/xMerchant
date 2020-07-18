@@ -104,6 +104,10 @@ local PRESERVED_CONTAMINANT_LIST = {
     [178015] = {318480,3,66}, -- Void Ritual III
 };
 
+local ACHIEVEMENT_LIST = {
+	[47541] = 3736, -- Argent Pony Bridle / Pony Up!
+};
+
 local function ScanItemTooltip(item)
 	if ( not item.link or item.tooltipScanned ) then
 		return item;
@@ -861,12 +865,20 @@ local function UpdateMerchantItems()
 				item = ProcessItem(item);
 			end
 
-			if ( item.transmogIsIllusionKnown ) then
-				table.insert(item.errormsgs, ITEM_SPELL_KNOWN);
-				item.hasErrors = true;
+			if ( ACHIEVEMENT_LIST[item.itemID] ) then
+				local _, _, _, completed = GetAchievementInfo(ACHIEVEMENT_LIST[item.itemID]);
+				if ( not item.isKnown ) then
+					item.isKnown = completed;
+				end
 			end
 
-			if ( item.hasErrors and #item.errormsgs > 0 ) then
+			if ( item.transmogIsIllusionKnown or item.isKnown ) and ( not isMentionedInErrors(item.errormsgs, ITEM_SPELL_KNOWN) ) then
+				table.insert(item.errormsgs, ITEM_SPELL_KNOWN);
+			end
+
+			item.hasErrors = #item.errormsgs > 0;
+
+			if ( item.hasErrors ) then
 				table.insert(item.subtext, "|cffd00000" .. table.concat(item.errormsgs, " - ") .. "|r");
 			end
 		end
