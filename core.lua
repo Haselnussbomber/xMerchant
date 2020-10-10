@@ -239,13 +239,13 @@ local function IllusionsUpdate()
 end
 
 local function CurrencyUpdate_Currencies()
-	local numCurrencies = GetCurrencyListSize();
+	local numCurrencies = C_CurrencyInfo.GetCurrencyListSize();
 
 	for i = 1, numCurrencies do
-		local name, isHeader, _, _, _, count, _, max = GetCurrencyListInfo(i);
+		local currencyInfo = C_CurrencyInfo.GetCurrencyListInfo(i);
 
-		if ( not isHeader and name and name ~= "" ) then
-			local link = GetCurrencyListLink(i);
+		if ( currencyInfo and not currencyInfo.isHeader and currencyInfo.name ~= "" ) then
+			local link = C_CurrencyInfo.GetCurrencyListLink(i);
 			local id = tonumber(link:match("currency:(%d+)") or 0);
 
 			table.insert(currencies, {
@@ -253,9 +253,9 @@ local function CurrencyUpdate_Currencies()
 				index = i,
 				id = id,
 				link = link,
-				name = name, -- add name because sometimes we get no itemID for currencies
-				count = count,
-				max = max
+				name = currencyInfo.name, -- add name because sometimes we get no itemID for currencies
+				count = currencyInfo.quantity,
+				max = currencyInfo.maxQuantity
 			});
 		end
 	end
@@ -467,7 +467,7 @@ end
 local function ProcessGetItemInfo(item)
 	local _, _, itemRarity, iLevel, _, itemType, itemSubType, _, equipSlot, _, _, itemClassId, itemSubClassId = GetItemInfo(item.link);
 
-	itemRarity = ( itemRarity or LE_ITEM_QUALITY_COMMON );
+	itemRarity = ( itemRarity or Enum.ItemQuality.Common );
 
 	item.info.itemRarity = itemRarity;
 	item.info.iLevel = iLevel;
@@ -504,7 +504,7 @@ local function ProcessItem(item)
 	-- item level
 	if ( item.isEquippable
 		and iLevel
-		and not ( itemRarity == LE_ITEM_QUALITY_HEIRLOOM and iLevel == 1 )
+		and not ( itemRarity == Enum.ItemQuality.Heirloom and iLevel == 1 )
 		and equipSlot ~= "INVTYPE_TABARD"
 		and equipSlot ~= "INVTYPE_BAG"
 		and equipSlot ~= "INVTYPE_BODY"
@@ -567,7 +567,7 @@ local function ProcessItem(item)
 	-- heirlooms
 	if ( not item.isRecipe
 		and item.itemID
-		and itemRarity == LE_ITEM_QUALITY_HEIRLOOM
+		and itemRarity == Enum.ItemQuality.Heirloom
 		and not C_Heirloom.PlayerHasHeirloom(item.itemID)
 	) then
 		item.heirloomUncollected = true;
