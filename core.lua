@@ -847,7 +847,7 @@ local function UpdateMerchantItems()
 				end
 			end
 
-			if ( CanIMogIt:IsTransmogable(link) ) then
+			if ( CanIMogIt and CanIMogIt:IsTransmogable(link) ) then
 				item.transmogUncollected = (
 					CanIMogIt:PlayerKnowsTransmogFromItem(link) == false
 					and CanIMogIt:PlayerKnowsTransmog(link) == false
