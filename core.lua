@@ -239,6 +239,26 @@ local function IllusionsUpdate()
 end
 
 local function CurrencyUpdate_Currencies()
+	local merchantCurrencies = { GetMerchantCurrencies() };
+	local numMerchantCurrencies = #merchantCurrencies;
+	
+	for i = 1, numMerchantCurrencies do
+		local id = merchantCurrencies[i];
+		local currencyInfo = C_CurrencyInfo.GetCurrencyInfo(id);
+
+		if ( currencyInfo ) then
+			table.insert(currencies, {
+				type = "currency",
+				index = i,
+				id = id,
+				link = C_CurrencyInfo.GetCurrencyListLink(i),
+				name = currencyInfo.name,
+				count = currencyInfo.quantity,
+				max = currencyInfo.maxQuantity
+			});
+		end
+	end
+
 	local numCurrencies = C_CurrencyInfo.GetCurrencyListSize();
 
 	for i = 1, numCurrencies do
@@ -250,7 +270,7 @@ local function CurrencyUpdate_Currencies()
 
 			table.insert(currencies, {
 				type = "currency",
-				index = i,
+				index = numMerchantCurrencies + i,
 				id = id,
 				link = link,
 				name = currencyInfo.name, -- add name because sometimes we get no itemID for currencies
@@ -366,16 +386,25 @@ local function UpdateAltCurrency(button, index)
 			local texture, cost, link, name = GetMerchantItemCostItem(index, i);
 
 			local itemID = tonumber((link or ""):match("item:(%d+)") or 0);
+			local currencyID = tonumber((link or ""):match("currency:(%d+)") or 0);
 			local item = button.item[i];
 
 			item.itemIndex = index;
 			item.costItemIndex = i;
 
-			if ( itemID ) then
+			if ( itemID or currencyID ) then
 				local currency = nil;
 
 				for _, c in ipairs(currencies) do
-					if ( c.id == itemID or (c.name and name and c.name == name) ) then
+					if (
+						(c.type == "equip" or c.type == "bagitem" or c.type == "reagentbankitem")
+						and c.id == itemID
+					) then
+						currency = c;
+						break;
+					end
+
+					if (c.type == "currency" and c.id == currencyID) then
 						currency = c;
 						break;
 					end
@@ -447,18 +476,22 @@ local function isMentionedInErrors(errors, text)
 end
 
 local function ProcessCurrency(item)
-	local _, currentAmount, _, earnedThisWeek, weeklyMax, totalMax, _, rarity = GetCurrencyInfo(item.link);
+	local currencyInfo = C_CurrencyInfo.GetCurrencyInfoFromLink(item.link);
 
-	item.info.currentAmount = currentAmount;
-	item.info.earnedThisWeek = earnedThisWeek;
-	item.info.weeklyMax = weeklyMax;
-	item.info.totalMax = totalMax;
-	item.info.rarity = rarity;
+	if (not currencyInfo) then
+		return item;
+	end
 
-	if ( weeklyMax and weeklyMax > 0 ) then
-		table.insert(item.subtext, CURRENCY_WEEKLY_CAP:format("", earnedThisWeek, weeklyMax));
-	elseif ( totalMax and totalMax ) then
-		table.insert(item.subtext, CURRENCY_TOTAL_CAP:format("", currentAmount, totalMax));
+	item.info.currentAmount = currencyInfo.quantity;
+	item.info.earnedThisWeek = currencyInfo.quantityEarnedThisWeek;
+	item.info.weeklyMax = currencyInfo.maxWeeklyQuantity;
+	item.info.totalMax = currencyInfo.maxQuantity;
+	item.info.rarity = currencyInfo.quality;
+
+	if ( item.info.weeklyMax and item.info.weeklyMax > 0 ) then
+		table.insert(item.subtext, CURRENCY_WEEKLY_CAP:format("", item.info.earnedThisWeek, item.info.weeklyMax));
+	elseif ( item.info.totalMax and item.info.totalMax ) then
+		table.insert(item.subtext, CURRENCY_TOTAL_CAP:format("", item.info.currentAmount, item.info.totalMax));
 	end
 
 	return item;
