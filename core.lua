@@ -990,6 +990,7 @@ end
 
 local function Item_OnClick(self)
 	HandleModifiedItemClick(self.itemLink);
+	CurrencyUpdate();
 end
 
 local function Item_OnEnter(self)
