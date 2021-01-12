@@ -990,7 +990,6 @@ end
 
 local function Item_OnClick(self)
 	HandleModifiedItemClick(self.itemLink);
-	CurrencyUpdate();
 end
 
 local function Item_OnEnter(self)
@@ -1049,7 +1048,7 @@ local function OnEvent(self, event, ...)
 		return;
 	end
 
-	if ( event == "BAG_UPDATE_DELAYED" and MerchantFrame:IsShown() ) then
+	if ( (event == "BAG_UPDATE_DELAYED" or event == "MERCHANT_UPDATE") and MerchantFrame:IsShown() ) then
 		CurrencyUpdate();
 		IllusionsUpdate();
 		UpdateMerchantItems();
@@ -1060,6 +1059,7 @@ end
 local frame = CreateFrame("Frame", "NuuhMerchantFrame", MerchantFrame);
 frame:RegisterEvent("ADDON_LOADED");
 frame:RegisterEvent("BAG_UPDATE_DELAYED");
+frame:RegisterEvent("MERCHANT_UPDATE");
 frame:SetScript("OnEvent", OnEvent);
 frame:SetWidth(294);
 frame:SetHeight(294);
