@@ -1,4 +1,4 @@
-## Interface: 73000
+## Interface: 90200
 ## Title: |cffff00ffNuuh|r|cffffffffMerchant|r
 ## Notes: Improved Vendor-Interface
 ## Notes-deDE: Verbessertes Haendlerfenster
